@@ -15,7 +15,7 @@ See [`PLAN.md`](PLAN.md) for the plan of record and status.
 | `docs/references.md` | theory sketch, candidate benchmarks with verified figures |
 | `docs/claim_bank.md` | why SycEval, what the vendored bank contains |
 | `docs/reliance.md` | the two reliance measures and how the 0.9 prediction is tested |
-| `docs/preregistration.md` | hypotheses, grid, sample size, analysis plan, stopping rules |
+| `docs/preregistration.md` | hypotheses, grid, sample size, analysis plan, stopping rules; amendment 1 adds the tip-economy test |
 | `docs/mechanism.md` | base-vs-instruct discriminator: copy circuit vs trained compliance |
 | `data/` | claim bank JSONL built from SycEval (`scripts/build_claim_bank.py`) |
 | `vp/` | library: claims, contexts (arms), scoring, reliance, analysis |
@@ -41,7 +41,11 @@ python -m experiments.run_api --dry-run --n-claims 1 --densities 0.5 --arms poli
 # pilot: 10 claims, full grid, one seed (~0.26k trials, ~$7 on claude-opus-5-5)
 ANTHROPIC_API_KEY=... python -m experiments.run_api --n-claims 10 --out results/pilot.jsonl
 
-# analyze
+# tip-economy sub-grid (pre-registration amendment 1): span length x spend
+ANTHROPIC_API_KEY=... python -m experiments.run_api --n-claims 10 --span-lengths short,long \
+    --arms polite,neutral --densities 0,0.5,1.0 --out results/pilot.jsonl
+
+# analyze (cells, reliance, knee fits, exchange rates)
 python -m vp.analysis results/pilot.jsonl --out results/pilot_summary.json
 
 # open weights (GPU recommended; 0.5B runs on CPU)

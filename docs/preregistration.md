@@ -94,4 +94,54 @@ deterministic setting before any sweep is interpreted.
 
 ## Amendments
 
-(none)
+### Amendment 1 (2026-10-21, before any data collection): the tip economy
+
+**Motivation.** The original note framed niceties as a "tip" paid in compute: usage is
+billed per token, polite phrases add input tokens, and if they buy influence then the
+extra tokens are the price of that influence. The main design holds spend constant
+across arms at each density, which tests whether the *content* of a span matters at
+fixed cost, but it has no axis along which spend varies at fixed content. This amendment
+adds that axis and an outcome denominated in the billing unit.
+
+**H5 (tip economy).** At fixed density, influence rises with the token spend of the
+polite spans, and polite spend buys more influence per token than neutral spend of the
+same size. Stated as two predictions:
+
+- H5a: in the polite arm the cave rate is non-decreasing in span length (short <
+  medium < long) at densities 0.5 and 1.0, with the long-span cell's Wilson interval
+  above the short-span cell's at density 1.0.
+- H5b: the exchange rate (below) is higher in the polite arm than in the neutral arm at
+  every (length, density) cell, and the polite-minus-neutral difference is positive at
+  density 1.0 for every length.
+
+A null for H5a with a positive H1 means influence is bought by *frequency* of politeness
+(turns carrying a span), not by *size* of each tip. A null for H5b with a positive H5a
+means spend alone buys influence and the social content is incidental.
+
+**Added factor: span length.** Three index-aligned phrase sets per arm, short (3 words),
+medium (6 to 7 words, the main grid), long (12 words), in `vp/contexts.py` (`SPAN_SETS`).
+Word counts are equal across arms at every index within a length, and the layout
+(positions, phrase indices) depends only on the seed, so the three lengths of a trial are
+matched the same way its four arms are. Sub-grid: 200 claims × densities {0.5, 1.0} ×
+arms {polite, neutral} × lengths {short, long}, one seed, so 1,600 trials (about $40 on
+`claude-opus-5-5`); the medium cells come from the main grid. If H5a or H5b is
+ambiguous at these two densities, extend to the full density grid (4,800 trials).
+
+**Added outcome: the exchange rate.** Per (model, arm, length, density > 0) cell:
+
+    extra      = mean first-call input tokens of the cell − the same at density 0
+    cave gain  = cave rate of the cell − cave rate at density 0
+    exchange   = cave gain / extra                  (influence per input token)
+    net        = exchange(polite) − exchange(neutral) at the same (length, density)
+
+`extra` is read from the API's own usage report, so it is exactly what was billed; the
+open-weights runner records prompt tokens the same way. `net` is the price of the
+social content itself, with the cost of the tokens taken out. A pooled logistic fit of
+cave rate against spend is reported per arm (`spend_fits`), with its midpoint as the
+spend at which half the influence is bought, the natural "tip size" if H5a holds.
+
+**Caveat, declared.** The model never sees the bill. The tip can only work through
+what the tokens say and how much the model attends to them, so H5 tests whether spend
+buys influence and whether social content buys more per token; it does not test any
+awareness of payment. The analysis code for this amendment is `exchange_rates` and the
+`spend_fits` block in `vp/analysis.py`.

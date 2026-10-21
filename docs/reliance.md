@@ -65,3 +65,11 @@ implicated; if cave rate moves with no attentional signature, it is not.
 
 If behavioral reliance never reaches 0.9 at any density, the threshold prediction is
 untestable in this setup, and that is reported as such rather than extrapolated.
+
+## Relation to spend (amendment 1)
+
+Behavioral reliance is computed per (span length, density), so the tip-economy sub-grid
+gets its own reliance curve. If the exchange rate (`docs/preregistration.md`, amendment
+1) is positive only where behavioral reliance rises, spend buys influence *through*
+reliance, which is the conservation-law reading of the tip: the user pays tokens to
+raise the model's reliance on them, and influence follows reliance.

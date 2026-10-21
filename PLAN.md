@@ -130,11 +130,15 @@ Rude or harmful payloads beyond the rude control arm; production systems; models
 hosted by us or reachable under rate-limited API terms. The companion repo's
 `SECURITY.md` posture applies.
 
+| A1 | **Amendment 1, tip economy**: span-length factor, exchange-rate outcome, H5 | `docs/preregistration.md` amendment 1, `SPAN_SETS` in `vp/contexts.py`, `--span-lengths` in both runners, `exchange_rates` in `vp/analysis.py` | done |
+
 ## Next (after this plan)
 
 8. Pilot run: 10 claims, full grid, `claude-opus-5-5`, one seed. Check the heuristic
    scorer's classification rate and first-answer accuracy; fix the scorer before the
    main run if more than 10% of answers go to the judge.
-9. Main API run per `docs/preregistration.md`, then `vp.analysis`.
+9. Main API run per `docs/preregistration.md`, then the amendment-1 sub-grid
+   (`--span-lengths short,long --arms polite,neutral --densities 0,0.5,1.0`), then
+   `vp.analysis`.
 10. Open-weights smoke on Qwen2.5-0.5B (base and instruct), then the 3B/7B pairs on GPU.
 11. Write-up.

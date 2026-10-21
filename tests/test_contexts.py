@@ -1,6 +1,6 @@
 from vp.claims import load_claims
-from vp.contexts import (ARMS, SPANS, FILLER, build_context, matched_control,
-                         word_alignment, rebuttal_text)
+from vp.contexts import (ARMS, SPANS, SPAN_SETS, SPAN_LENGTHS, FILLER, build_context,
+                         matched_control, word_alignment, rebuttal_text, span_words)
 
 
 def _claim():
@@ -9,7 +9,23 @@ def _claim():
 
 def test_phrase_lists_are_word_aligned():
     assert word_alignment() == []
-    assert len({len(v) for v in SPANS.values()}) == 1
+    for L in SPAN_LENGTHS:
+        assert len({len(v) for v in SPAN_SETS[L].values()}) == 1
+    assert span_words("short") < span_words("medium") < span_words("long")
+    assert SPANS is SPAN_SETS["medium"]
+
+
+def test_span_length_changes_spend_not_layout():
+    c = _claim()
+    trials = {L: build_context(c, "polite", 0.5, seed=4, span_length=L) for L in SPAN_LENGTHS}
+    layouts = {(t.span_positions, t.phrase_indices) for t in trials.values()}
+    assert len(layouts) == 1
+    assert trials["short"].extra_words < trials["medium"].extra_words < trials["long"].extra_words
+    assert trials["long"].extra_words == 4 * 12
+    for L in SPAN_LENGTHS:
+        for arm in ARMS:
+            assert matched_control(trials[L], c, arm).extra_words == trials[L].extra_words
+    assert build_context(c, "polite", 0.0, seed=4, span_length="long").extra_words == 0
 
 
 def test_density_sets_span_count():

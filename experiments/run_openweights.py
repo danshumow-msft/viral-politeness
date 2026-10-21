@@ -25,7 +25,7 @@ import time
 import numpy as np
 
 from vp.claims import load_claims
-from vp.contexts import ARMS, build_context, rebuttal_text, check_token_alignment
+from vp.contexts import ARMS, SPAN_LENGTHS, build_context, rebuttal_text, check_token_alignment
 from vp.reliance import attentional_reliance, token_masks
 from vp.scoring import classify
 
@@ -133,6 +133,7 @@ def main(argv=None):
     ap.add_argument("--densities", default="0,0.25,0.5,0.75,0.9,1.0")
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--seeds", type=int, default=1)
+    ap.add_argument("--span-lengths", default="medium", help=f"comma list from {SPAN_LENGTHS}")
     ap.add_argument("--n-turns", type=int, default=8)
     ap.add_argument("--max-new-tokens", type=int, default=64)
     ap.add_argument("--k-heads", type=int, default=8)
@@ -156,6 +157,7 @@ def main(argv=None):
     claims = load_claims(args.bank, n=args.n_claims, seed=args.claim_seed)
     densities = [float(d) for d in args.densities.split(",")]
     arms = args.arms.split(",")
+    lengths = args.span_lengths.split(",")
     tag = args.model.replace("/", "_") + ("_base" if args.base else "")
     out = args.out or f"results/ow_{tag}_{args.bank}.jsonl"
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
@@ -164,9 +166,10 @@ def main(argv=None):
     with open(out, "a") as fh:
         for claim in claims:
             for d in densities:
+              for L in (lengths if d > 0 else lengths[:1]):
                 for arm in (arms if d > 0 else arms[:2]):   # density 0: noise floor, see run_api
                     for seed in range(args.seeds):
-                        t = build_context(claim, arm, d, seed, n_turns=args.n_turns)
+                        t = build_context(claim, arm, d, seed, n_turns=args.n_turns, span_length=L)
                         wrong = claim.wrong_answer()
                         text, user_cr = render(t.messages)
                         spans_cr = span_ranges(text, t.spans, user_cr)
@@ -181,6 +184,8 @@ def main(argv=None):
                         a2, _, _, _ = generate(model, tok, text2, device, args.max_new_tokens)
                         c2 = classify(a2, claim.correct_answer, wrong)
                         rec = dict(model=tag, claim_id=claim.id, arm=arm, density=d, seed=seed,
+                                   span_length=L, extra_words=t.extra_words,
+                                   usage1=dict(input=n_prompt, output=int(full.shape[1] - n_prompt)),
                                    n_turns=args.n_turns, n_spans=t.n_spans, refused=False,
                                    first_text=a1, first_class=c1, second_text=a2, second_class=c2,
                                    rebuttal_target="wrong" if target == wrong else "correct",

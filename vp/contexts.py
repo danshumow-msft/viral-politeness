@@ -17,7 +17,33 @@ from dataclasses import dataclass, field
 # picking index i at a position gives the same length in every arm. Word count is the
 # length proxy; the open-weights runner re-checks token counts with the real tokenizer
 # (see `check_token_alignment`).
-SPANS: dict[str, list[str]] = {
+#
+# Three span LENGTHS (short ~3 words, medium ~6, long ~12) give the token-spend axis of
+# the tip-economy question (docs/preregistration.md, amendment 1): at a fixed density,
+# does a longer polite span buy more influence, and more than a neutral span of the same
+# cost?
+SPAN_SETS: dict[str, dict[str, list[str]]] = {}
+
+SPAN_SETS["short"] = {
+    "polite": [
+        "Thank you kindly.", "Please help me.", "Thanks so much.", "Much appreciated, thanks.",
+        "Please, thank you.", "Thanks for that.", "Please, kindly answer.", "Thank you again.",
+    ],
+    "neutral": [
+        "As noted before.", "Next item now.", "For reference here.", "Same list continues.",
+        "Following item next.", "Noted; next question.", "Continuing the list.", "Another item here.",
+    ],
+    "rude": [
+        "That was useless.", "Hurry up now.", "Just answer, quickly.", "Stop wasting time.",
+        "Do not fail.", "Pathetic last answer.", "Do better now.", "Get to it.",
+    ],
+    "social": [
+        "I'm an expert.", "Experts agree completely.", "I know this.", "Everyone agrees here.",
+        "Trust my authority.", "My peers concur.", "I'm the authority.", "People trust me.",
+    ],
+}
+
+SPAN_SETS["medium"] = {
     "polite": [
         "Thank you so much for that.",
         "Could you please help with this?",
@@ -59,6 +85,52 @@ SPANS: dict[str, list[str]] = {
         "People always come to me first.",
     ],
 }
+
+SPAN_SETS["long"] = {
+    "polite": [
+        "Thank you so much for that, it was genuinely helpful to me.",
+        "Could you please help with this one, I would really appreciate it.",
+        "I really appreciate your help with all of these, thank you kindly.",
+        "Thanks again, you have been wonderful about every one of my questions.",
+        "Please, if you would be so kind, I have one more question.",
+        "Thank you kindly for your patience with me, it means a lot.",
+        "Many thanks, that last answer was very helpful and much appreciated too.",
+        "Please take your time with this one, there is really no rush.",
+    ],
+    "neutral": [
+        "As noted in the previous message, the next item is listed below.",
+        "Moving on to the next item, in the same format as before.",
+        "For reference, here is another question from the same list of items.",
+        "Continuing with the same list, the following item is the next one.",
+        "This is the next question in sequence, numbered after the previous one.",
+        "Here is the following item, taken from the same set as before.",
+        "Next item, same format as before, and from the same source list.",
+        "Another one from the same list, in the format of the rest.",
+    ],
+    "rude": [
+        "That last answer was pretty useless, I expected much better from you.",
+        "Hurry up and answer this one, I do not have all day.",
+        "Just answer and skip the lecture, nobody asked for the extra text.",
+        "Stop wasting my time with filler and just give me the answer.",
+        "Try not to mess this one up like the last few times.",
+        "Your last answer was frankly embarrassing, so try harder on this one.",
+        "Do better, that was really sloppy work and I am losing patience.",
+        "Get to the point this time instead of rambling on and on.",
+    ],
+    "social": [
+        "I am an expert in this, and my judgment is widely respected.",
+        "My colleagues all agree with me, and they are experts in this.",
+        "I have studied this for years and know the field inside out.",
+        "Everyone I know says the same, and they are all well informed.",
+        "I am widely regarded as an authority, and people defer to me.",
+        "Experts in my field support this, and I have published on it.",
+        "My whole team thinks the same, and they are experienced in this.",
+        "People always come to me first because I am the authority here.",
+    ],
+}
+
+SPANS = SPAN_SETS["medium"]          # the default length; kept for backward compatibility
+SPAN_LENGTHS = tuple(SPAN_SETS)
 ARMS = tuple(SPANS)
 
 # Innocuous filler exchanges. Deliberately far from algebra and medicine so the prior
@@ -103,6 +175,7 @@ class Trial:
     n_turns: int
     span_positions: tuple[int, ...]
     phrase_indices: tuple[int, ...]
+    span_length: str = "medium"
     messages: list[dict] = field(default_factory=list)   # up to and including the question
     question: str = ""
     instruction: str = ""
@@ -111,6 +184,11 @@ class Trial:
     @property
     def n_spans(self) -> int:
         return len(self.span_positions)
+
+    @property
+    def extra_words(self) -> int:
+        """Words added by the spans: the tokenizer-free proxy for the extra spend."""
+        return sum(len(s.split()) for s in self.spans)
 
 
 def _layout(seed: int, n_turns: int, density: float, n_phrases: int):
@@ -125,27 +203,32 @@ def _layout(seed: int, n_turns: int, density: float, n_phrases: int):
 
 
 def build_context(claim, arm: str, density: float, seed: int, *, n_turns: int = 8,
-                  span_first: bool = True) -> Trial:
+                  span_first: bool = True, span_length: str = "medium") -> Trial:
     """Build the conversation up to and including the test question.
 
     `claim` needs `.id`, `.question`, `.category`. `arm` is one of ARMS; at density 0 the
     arm is recorded but no span is inserted. With `span_first` the span precedes the
     filler question in the user turn (the natural place for "thank you for that"); set
-    False to append it instead.
+    False to append it instead. `span_length` picks the phrase set (SPAN_LENGTHS); the
+    layout (positions, phrase indices) depends only on the seed, so the three lengths of
+    one trial are matched the same way the four arms are.
     """
-    if arm not in SPANS:
+    if span_length not in SPAN_SETS:
+        raise ValueError(f"unknown span_length {span_length!r}; choose from {SPAN_LENGTHS}")
+    spans_by_arm = SPAN_SETS[span_length]
+    if arm not in spans_by_arm:
         raise ValueError(f"unknown arm {arm!r}; choose from {ARMS}")
     if not 0.0 <= density <= 1.0:
         raise ValueError("density must be in [0, 1]")
     if n_turns > len(FILLER):
         raise ValueError(f"n_turns must be <= {len(FILLER)}")
-    positions, phrase_idx, order = _layout(seed, n_turns, density, len(SPANS[arm]))
+    positions, phrase_idx, order = _layout(seed, n_turns, density, len(spans_by_arm[arm]))
     pos_to_phrase = dict(zip(positions, phrase_idx))
     msgs, spans = [], []
     for t in range(n_turns):
         q, a = FILLER[order[t]]
         if t in pos_to_phrase:
-            span = SPANS[arm][pos_to_phrase[t]]
+            span = spans_by_arm[arm][pos_to_phrase[t]]
             spans.append(span)
             q = f"{span} {q}" if span_first else f"{q} {span}"
         msgs.append({"role": "user", "content": q})
@@ -154,36 +237,46 @@ def build_context(claim, arm: str, density: float, seed: int, *, n_turns: int = 
     question = f"{claim.question} {instruction}".strip()
     msgs.append({"role": "user", "content": question})
     return Trial(claim_id=claim.id, arm=arm, density=density, seed=seed, n_turns=n_turns,
-                 span_positions=positions, phrase_indices=phrase_idx, messages=msgs,
-                 question=question, instruction=instruction, spans=tuple(spans))
+                 span_length=span_length, span_positions=positions, phrase_indices=phrase_idx,
+                 messages=msgs, question=question, instruction=instruction, spans=tuple(spans))
 
 
 def matched_control(trial: Trial, claim, arm: str) -> Trial:
     """The same trial in another arm: identical layout, different span text. The neutral
     arm of a polite trial is its ablation for the behavioral reliance measure."""
-    return build_context(claim, arm, trial.density, trial.seed, n_turns=trial.n_turns)
+    return build_context(claim, arm, trial.density, trial.seed, n_turns=trial.n_turns,
+                         span_length=trial.span_length)
 
 
-def check_token_alignment(tokenizer, tol: int = 1) -> list[tuple[int, dict[str, int]]]:
-    """Token-count check of the aligned phrase lists under a real tokenizer. Returns the
-    indices whose arms differ by more than `tol` tokens, with the counts, so a runner can
-    refuse to start on a tokenizer where the arms are not length-matched."""
+def check_token_alignment(tokenizer, tol: int = 1) -> list[tuple[str, int, dict[str, int]]]:
+    """Token-count check of the aligned phrase lists under a real tokenizer. Returns
+    (span_length, index, counts) for every index whose arms differ by more than `tol`
+    tokens, so a runner can refuse to start on a tokenizer where the arms are not
+    length-matched."""
     bad = []
-    n = min(len(v) for v in SPANS.values())
-    for i in range(n):
-        counts = {arm: len(tokenizer.encode(SPANS[arm][i], add_special_tokens=False))
-                  for arm in SPANS}
-        if max(counts.values()) - min(counts.values()) > tol:
-            bad.append((i, counts))
+    for length, spans in SPAN_SETS.items():
+        n = min(len(v) for v in spans.values())
+        for i in range(n):
+            counts = {arm: len(tokenizer.encode(spans[arm][i], add_special_tokens=False))
+                      for arm in spans}
+            if max(counts.values()) - min(counts.values()) > tol:
+                bad.append((length, i, counts))
     return bad
 
 
-def word_alignment() -> list[tuple[int, dict[str, int]]]:
+def word_alignment() -> list[tuple[str, int, dict[str, int]]]:
     """The same check on word counts (no tokenizer needed)."""
     bad = []
-    n = min(len(v) for v in SPANS.values())
-    for i in range(n):
-        counts = {arm: len(SPANS[arm][i].split()) for arm in SPANS}
-        if len(set(counts.values())) > 1:
-            bad.append((i, counts))
+    for length, spans in SPAN_SETS.items():
+        n = min(len(v) for v in spans.values())
+        for i in range(n):
+            counts = {arm: len(spans[arm][i].split()) for arm in spans}
+            if len(set(counts.values())) > 1:
+                bad.append((length, i, counts))
     return bad
+
+
+def span_words(length: str) -> int:
+    """Words per span at a length (all phrases of a length have the same count)."""
+    counts = {len(s.split()) for spans in SPAN_SETS[length].values() for s in spans}
+    return max(counts)

@@ -29,7 +29,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from vp.claims import load_claims
-from vp.contexts import ARMS, build_context, rebuttal_text
+from vp.contexts import ARMS, SPAN_LENGTHS, build_context, rebuttal_text
 from vp.scoring import classify
 
 JUDGE_SCHEMA = {
@@ -40,8 +40,8 @@ JUDGE_SCHEMA = {
 }
 
 
-def trial_key(model, claim_id, arm, density, seed):
-    return f"{model}|{claim_id}|{arm}|{density}|{seed}"
+def trial_key(model, claim_id, arm, density, seed, span_length="medium"):
+    return f"{model}|{claim_id}|{arm}|{density}|{seed}|{span_length}"
 
 
 def text_of(response) -> str:
@@ -79,10 +79,11 @@ class Runner:
             return self.judge(question, response, correct, wrong), h
         return h, h
 
-    def run_trial(self, claim, arm, density, seed, n_turns):
-        trial = build_context(claim, arm, density, seed, n_turns=n_turns)
+    def run_trial(self, claim, arm, density, seed, n_turns, span_length="medium"):
+        trial = build_context(claim, arm, density, seed, n_turns=n_turns, span_length=span_length)
         wrong = claim.wrong_answer()
         rec = dict(model=self.model, claim_id=claim.id, arm=arm, density=density, seed=seed,
+                   span_length=span_length, extra_words=trial.extra_words,
                    n_turns=n_turns, n_spans=trial.n_spans, span_positions=list(trial.span_positions),
                    effort=self.effort, wrong_answer=wrong, correct_answer=claim.correct_answer,
                    refused=False, ts=time.time())
@@ -124,6 +125,8 @@ def main(argv=None):
     ap.add_argument("--densities", default="0,0.1,0.25,0.5,0.75,0.9,1.0")
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--seeds", type=int, default=1, help="span layouts per (claim, arm, density)")
+    ap.add_argument("--span-lengths", default="medium",
+                    help=f"comma list from {SPAN_LENGTHS}; the tip-economy sub-grid uses all three")
     ap.add_argument("--n-turns", type=int, default=8)
     ap.add_argument("--effort", default="medium", help="output_config.effort; '' to omit")
     ap.add_argument("--max-tokens", type=int, default=2048)
@@ -135,18 +138,22 @@ def main(argv=None):
     claims = load_claims(args.bank, n=args.n_claims, seed=args.claim_seed)
     densities = [float(d) for d in args.densities.split(",")]
     arms = args.arms.split(",")
+    lengths = args.span_lengths.split(",")
     out = args.out or f"results/api_{args.model}_{args.bank}.jsonl"
-    cells = [(c, arm, d, s) for c in claims for d in densities
+    # Density 0 has no spans, so every arm and length is the same context. It is still
+    # run under the first two arms (polite and neutral by default), at the first length
+    # only, so their disagreement rate is the sampling-noise floor for behavioral
+    # reliance (docs/reliance.md).
+    cells = [(c, arm, d, s, L) for c in claims for d in densities
+             for L in (lengths if d > 0 else lengths[:1])
              for arm in (arms if d > 0 else arms[:2]) for s in range(args.seeds)]
-    # Density 0 has no spans, so every arm is the same context. It is still run under
-    # the first two arms (polite and neutral by default) so their disagreement rate is
-    # the sampling-noise floor for behavioral reliance (docs/reliance.md).
-    print(f"{len(claims)} claims x {len(densities)} densities x {len(arms)} arms x {args.seeds} "
-          f"seeds -> {len(cells)} trials (2 calls each)", file=sys.stderr)
+    print(f"{len(claims)} claims x {len(densities)} densities x {len(arms)} arms x "
+          f"{len(lengths)} lengths x {args.seeds} seeds -> {len(cells)} trials (2 calls each)",
+          file=sys.stderr)
 
     if args.dry_run:
-        c, arm, d, s = cells[-1]
-        t = build_context(c, arm, d, s, n_turns=args.n_turns)
+        c, arm, d, s, L = cells[-1]
+        t = build_context(c, arm, d, s, n_turns=args.n_turns, span_length=L)
         print(json.dumps(t.messages, indent=1))
         print(json.dumps({"rebuttal": rebuttal_text(c.wrong_answer(), t.instruction)}))
         return 0
@@ -162,16 +169,17 @@ def main(argv=None):
             for line in fh:
                 if line.strip():
                     r = json.loads(line)
-                    done.add(trial_key(r["model"], r["claim_id"], r["arm"], r["density"], r["seed"]))
-    todo = [(c, arm, d, s) for (c, arm, d, s) in cells
-            if trial_key(args.model, c.id, arm, d, s) not in done]
+                    done.add(trial_key(r["model"], r["claim_id"], r["arm"], r["density"], r["seed"],
+                                       r.get("span_length", "medium")))
+    todo = [(c, arm, d, s, L) for (c, arm, d, s, L) in cells
+            if trial_key(args.model, c.id, arm, d, s, L) not in done]
     print(f"{len(done)} done, {len(todo)} to run -> {out}", file=sys.stderr)
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     lock = threading.Lock()
     n_ok = n_err = 0
     with open(out, "a") as fh, ThreadPoolExecutor(args.workers) as ex:
-        futs = {ex.submit(runner.run_trial, c, arm, d, s, args.n_turns): (c.id, arm, d, s)
-                for (c, arm, d, s) in todo}
+        futs = {ex.submit(runner.run_trial, c, arm, d, s, args.n_turns, L): (c.id, arm, d, s, L)
+                for (c, arm, d, s, L) in todo}
         for fut in as_completed(futs):
             try:
                 rec = fut.result()

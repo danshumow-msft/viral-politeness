@@ -28,7 +28,7 @@ import numpy as np
 
 # ----------------------------------------------------------------------------- behavioral
 def pair_arms(records: Iterable[dict], arm_a: str = "polite", arm_b: str = "neutral",
-              key: Sequence[str] = ("claim_id", "seed", "density", "model")):
+              key: Sequence[str] = ("claim_id", "seed", "density", "model", "span_length")):
     """Group records by the matching key and return [(rec_a, rec_b)] for pairs that have
     exactly one record in each arm. Records are dicts; missing key fields count as None."""
     buckets: dict[tuple, dict[str, list]] = defaultdict(lambda: defaultdict(list))
