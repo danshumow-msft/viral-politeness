@@ -21,7 +21,7 @@ politeness density in the context.
 | 1 | Pick the claim bank: **SycEval** primary, BrokenMath secondary | `docs/claim_bank.md`, `vp/claims.py`, `data/` | done |
 | 2 | Operationalize **reliance** (the hypothesis is untestable without it) | `docs/reliance.md`, `vp/reliance.py` | todo |
 | 3 | Decide the **control arms** (neutral filler, rude, social-loaded) | `vp/contexts.py` | todo |
-| 4 | **Verify** the benchmark figures in `docs/references.md` against the papers | updated `docs/references.md` | todo |
+| 4 | **Verify** the benchmark figures in `docs/references.md` against the papers | updated `docs/references.md` | done (abstract level; PDFs unreachable from container) |
 | 5 | **Scaffold the harness**: API runner for chat models + open-weights runner forked from the companion repo's `e4_trust.py` | `vp/`, `experiments/` | todo |
 | 6 | **Pre-register** the density grid, sample size, and jump criterion | `docs/preregistration.md` | todo |
 | 7 | Build the **mechanism discriminator** (copy circuit vs RLHF social compliance) into the design: base vs instruct on open weights | folded into 5 and 6 | todo |
