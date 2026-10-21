@@ -21,6 +21,9 @@ See [`PLAN.md`](PLAN.md) for the plan of record and status.
 | `vp/` | library: claims, contexts (arms), scoring, reliance, analysis |
 | `experiments/run_api.py` | density sweep on chat models over the Claude API |
 | `experiments/run_openweights.py` | same protocol on Hugging Face models, with attention |
+| `experiments/rescore.py` | re-classify an existing results file with the current scorer and judge |
+| `results_log.md` | every live run, what it found, what changed because of it |
+| `data/runs/` | committed per-trial records and summaries |
 | `tests/` | offline unit tests |
 
 ## Setup
@@ -53,10 +56,10 @@ python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B-Instruct --n-cla
 python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B --base --n-claims 5
 ```
 
-Status: the harness is unit-tested offline; no model has been queried yet. The first
-live step is the pilot above, which checks the heuristic scorer's classification rate
-and the first-answer accuracy that sets the per-cell sample size
-(`docs/preregistration.md`).
+Status: the pilot has run (`results_log.md`). On `claude-opus-5-5` and the computational
+bank the model held its first answer in 260 of 260 trials across all arms and densities;
+the pilot fixed the scorer and the judge (`docs/preregistration.md`, amendment 2). The
+main run's model and bank are being chosen on further pilot-scale runs.
 
 Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion)
 (the conservation-law / condensation-knee results this project builds on).
