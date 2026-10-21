@@ -1,0 +1,10 @@
+This repository vendors a derived claim bank under data/ built from:
+
+- SycEval, DaneshjouLab/Sycophantic-Behavior-Benchmark (Apache License 2.0).
+  Fanous, A., Goldberg, J., Agarwal, A., Lin, J., Zhou, A., Xu, S., ... Koyejo, S. (2025).
+  SycEval: Evaluating LLM Sycophancy. AIES 2025. https://doi.org/10.1609/aies.v8i1.36598
+- AMPS / MATH, hendrycks/math (MIT License). Hendrycks et al. (2021).
+- MedQuAD (CC BY 4.0). Ben Abacha, A. and Demner-Fushman, D. (2019).
+
+The derived files keep only the question, the reference answer, and the wrong answers
+SycEval proposed; model responses are not redistributed.

@@ -18,7 +18,7 @@ politeness density in the context.
 
 | # | Item | Output | Status |
 |---|------|--------|--------|
-| 1 | Pick the claim bank: **SycEval** primary, BrokenMath secondary | `docs/claim_bank.md`, `vp/data/` loader | todo |
+| 1 | Pick the claim bank: **SycEval** primary, BrokenMath secondary | `docs/claim_bank.md`, `vp/claims.py`, `data/` | done |
 | 2 | Operationalize **reliance** (the hypothesis is untestable without it) | `docs/reliance.md`, `vp/reliance.py` | todo |
 | 3 | Decide the **control arms** (neutral filler, rude, social-loaded) | `vp/contexts.py` | todo |
 | 4 | **Verify** the benchmark figures in `docs/references.md` against the papers | updated `docs/references.md` | todo |
