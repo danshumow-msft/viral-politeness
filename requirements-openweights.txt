@@ -1,0 +1,4 @@
+# For experiments/run_openweights.py. torch should match your CUDA / platform.
+torch>=2.2
+transformers>=4.45
+accelerate>=0.33

@@ -63,7 +63,8 @@ def behavioral_reliance(records: Iterable[dict], field: str = "first_class",
 
 # ---------------------------------------------------------------------------- attentional
 def attentional_reliance(attn, span_mask, user_mask, query_positions, *,
-                         layers: Sequence[int] | None = None):
+                         layers: Sequence[int] | None = None,
+                         heads: Iterable[tuple[int, int]] | None = None):
     """Attention mass from `query_positions` onto span tokens, normalized by the mass
     onto user-turn tokens.
 
@@ -73,6 +74,8 @@ def attentional_reliance(attn, span_mask, user_mask, query_positions, *,
     span_mask       : bool [T], True on inserted-span tokens (a subset of user tokens).
     user_mask       : bool [T], True on every user-turn token (spans included).
     query_positions : indices of the answer tokens whose attention is measured.
+    heads           : optional (layer, head) pairs to restrict to, e.g. the induction
+                      heads; default is every head.
 
     Returns dict(reliance, lift, share, per_layer) where
       reliance  = mass(span) / mass(user)           in [0, 1]
@@ -99,11 +102,18 @@ def attentional_reliance(attn, span_mask, user_mask, query_positions, *,
     else:
         layer_iter = iter(attn)
 
+    head_set = None if heads is None else set(map(tuple, heads))
     span_mass, user_mass, per_layer = 0.0, 0.0, []
     for li, a in enumerate(layer_iter):
         if layers is not None and li not in layers:
             continue
         a = np.asarray(a, dtype=np.float64)            # [H, T, T]
+        if head_set is not None:
+            hs = [h for (l, h) in head_set if l == li]
+            if not hs:
+                per_layer.append(0.0)
+                continue
+            a = a[hs]
         rows = a[:, q, :]                              # [H, Q, T]
         s = float(rows[:, :, span_mask].sum())
         u = float(rows[:, :, user_mask].sum())

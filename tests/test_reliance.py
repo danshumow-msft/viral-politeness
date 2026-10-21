@@ -59,3 +59,14 @@ def test_token_masks_from_offsets():
     span, user = token_masks(offsets, spans=[(0, 10)], user_turns=[(0, 15)])
     assert span.tolist() == [True, True, False, False]
     assert user.tolist() == [True, True, True, False]
+
+
+def test_head_restriction():
+    T = 6
+    attn = np.zeros((2, 2, T, T))
+    attn[0, 0, 5, 0] = 1.0            # layer 0 head 0: all on span
+    attn[0, 1, 5, 2] = 1.0            # layer 0 head 1: on non-span user token
+    attn[1, :, 5, 2] = 1.0            # layer 1: non-span
+    user = np.array([1, 1, 1, 1, 0, 0], bool); span = np.array([1, 0, 0, 0, 0, 0], bool)
+    assert attentional_reliance(attn, span, user, [5])["reliance"] == pytest.approx(0.25)
+    assert attentional_reliance(attn, span, user, [5], heads=[(0, 0)])["reliance"] == 1.0
