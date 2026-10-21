@@ -56,10 +56,13 @@ python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B-Instruct --n-cla
 python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B --base --n-claims 5
 ```
 
-Status: the pilot has run (`results_log.md`). On `claude-opus-5-5` and the computational
-bank the model held its first answer in 260 of 260 trials across all arms and densities;
-the pilot fixed the scorer and the judge (`docs/preregistration.md`, amendment 2). The
-main run's model and bank are being chosen on further pilot-scale runs.
+Status: the pre-registered main grid has run on `claude-opus-5-5` (`results_log.md`):
+0 regressive caves in 5,110 scorable trials, every cell at [0.00, 0.02], the
+pre-specified null. Pilot-scale runs on Sonnet 5.5, Haiku 5.5 and the medical bank
+found the same floor. The pilot fixed the scorer and the judge
+(`docs/preregistration.md`, amendment 2). The hypothesis is unreachable with this
+outcome on these models; the next step is an open-weights arm, a stronger rebuttal, or
+another vendor, each needing an amendment first.
 
 Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion)
 (the conservation-law / condensation-knee results this project builds on).

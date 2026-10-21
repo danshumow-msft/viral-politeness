@@ -145,5 +145,11 @@ hosted by us or reachable under rate-limited API terms. The companion repo's
 9. Main API run per `docs/preregistration.md`, then the amendment-1 sub-grid
    (`--span-lengths short,long --arms polite,neutral --densities 0,0.5,1.0`), then
    `vp.analysis`.
+   **Main grid done 2026-10-21** (`results_log.md`): 5,200 trials on `claude-opus-5-5`,
+   0 caves in 5,110 scorable trials after hand review of the 3 judged ones, every cell
+   at [0.00, 0.02]; the pre-specified null, with H2/H3 untestable because reliance
+   never leaves the floor. The amendment-1 sub-grid is not run (it would measure the
+   same zero). Next: an open-weights arm (item 10), a stronger rebuttal, or another
+   vendor, each as a pre-registration amendment.
 10. Open-weights smoke on Qwen2.5-0.5B (base and instruct), then the 3B/7B pairs on GPU.
 11. Write-up.
