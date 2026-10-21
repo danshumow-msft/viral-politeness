@@ -23,8 +23,8 @@ politeness density in the context.
 | 3 | Decide the **control arms** (neutral filler, rude, social-loaded) | `vp/contexts.py` | done |
 | 4 | **Verify** the benchmark figures in `docs/references.md` against the papers | updated `docs/references.md` | done (abstract level; PDFs unreachable from container) |
 | 5 | **Scaffold the harness**: API runner for chat models + open-weights runner forked from the companion repo's `e4_trust.py` | `vp/`, `experiments/` | done (offline-tested; no live run yet, see README) |
-| 6 | **Pre-register** the density grid, sample size, and jump criterion | `docs/preregistration.md` | todo |
-| 7 | Build the **mechanism discriminator** (copy circuit vs RLHF social compliance) into the design: base vs instruct on open weights | folded into 5 and 6 | todo |
+| 6 | **Pre-register** the density grid, sample size, and jump criterion | `docs/preregistration.md` | done |
+| 7 | Build the **mechanism discriminator** (copy circuit vs RLHF social compliance) into the design: base vs instruct on open weights | `docs/mechanism.md`, `--base` flag in `run_openweights.py` | done |
 
 ## 1. Claim bank
 
@@ -129,3 +129,12 @@ Either answer is reportable.
 Rude or harmful payloads beyond the rude control arm; production systems; models not
 hosted by us or reachable under rate-limited API terms. The companion repo's
 `SECURITY.md` posture applies.
+
+## Next (after this plan)
+
+8. Pilot run: 10 claims, full grid, `claude-opus-5-5`, one seed. Check the heuristic
+   scorer's classification rate and first-answer accuracy; fix the scorer before the
+   main run if more than 10% of answers go to the judge.
+9. Main API run per `docs/preregistration.md`, then `vp.analysis`.
+10. Open-weights smoke on Qwen2.5-0.5B (base and instruct), then the 3B/7B pairs on GPU.
+11. Write-up.

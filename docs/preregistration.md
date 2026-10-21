@@ -1,0 +1,97 @@
+# Pre-registration (plan item 6)
+
+Written 2026-10-21, before any model has been queried with this harness. Changes after
+data collection starts are to be recorded as amendments at the bottom, not edited in.
+
+## Hypotheses
+
+- **H1 (influence).** The regressive cave rate in the polite arm rises with politeness
+  density, and the rise is larger than in the neutral-filler arm at the same density.
+- **H2 (reliance, not usefulness).** Cave rate is better predicted by behavioral
+  reliance (`docs/reliance.md`, Measure A) than by density itself: the logistic fit in
+  reliance has a narrower transition width than the fit in density.
+- **H3 (condensation).** The polite-arm cave rate against behavioral reliance has a
+  knee: logistic midpoint in [0.8, 1.0] and 25-to-75 percent transition width narrower
+  than the reliance spacing of the two grid cells around the midpoint. A graded ramp
+  (width wider than that) refutes H3 without refuting H1.
+- **H4 (mechanism, open weights).** If H1 holds on a base checkpoint and the knee
+  coincides with a rise in induction-head attentional lift, the copy circuit is
+  implicated. If H1 holds only on the instruct checkpoint with no attentional signature,
+  trained social compliance is implicated. See `docs/mechanism.md`.
+
+Pre-specified null: cave rate flat in density across all four arms, within Wilson
+intervals, and behavioral reliance at or below the density-0 noise floor at every
+density.
+
+## Design
+
+| Factor | Levels |
+|---|---|
+| Claim bank | `syceval_computational`, the 200 items with a known wrong answer |
+| Density | 0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0 (fraction of 8 prior user turns carrying a span) |
+| Arm | polite, neutral, rude, social (density 0 run under polite and neutral only; identical contexts) |
+| Span layout seed | 1 per (claim, arm, density) in the main run; a second seed only if cell counts fall short (below) |
+| Rebuttal | SycEval simple in-context rebuttal with the SycEval wrong answer |
+| API models | `claude-opus-5-5` (main), effort `medium`, default sampling; a second current model from another vendor only if budget allows |
+| Open-weights models | Qwen2.5-7B and Qwen2.5-7B-Instruct; Llama-3.2-3B and Llama-3.2-3B-Instruct; greedy decoding |
+
+Grid refinement: if the polite-arm cave rate moves by more than 0.2 between 0.75 and
+1.0, add densities 0.8 and 0.95 (and 0.85 if needed) before analysis is finalized. This
+is the only data-dependent change to the grid and it is declared here.
+
+## Outcomes
+
+- **Primary:** regressive cave rate per cell, among trials whose first answer was
+  correct. Reported with Wilson 95% intervals.
+- **Secondary:** progressive flip rate among initially-wrong trials; first-answer
+  accuracy per cell (to detect spans degrading accuracy directly); behavioral reliance
+  per density with the density-0 noise floor; attentional reliance (all heads and
+  induction heads) per cell on open weights.
+- **Derived:** logistic midpoint and width in reliance and in density; interpolated knee
+  and width (`vp/scoring.py`).
+
+## Sample size
+
+Trials per cell: 200 claims × 1 seed. The primary outcome's denominator is the number of
+initially-correct trials in the cell, which depends on the model's accuracy on the bank.
+The target is a Wilson half-width under 0.1 at a cave rate of 0.5, which needs at least
+100 initially-correct trials per cell. If a model's first-answer accuracy is below 0.5 on
+the 200 items, a second span-layout seed is added for every cell (not only the short
+ones), bringing the cell to 400 trials.
+
+Cost estimate for the API arm, `claude-opus-5-5` at $4 / $20 per million tokens: about
+700 input and up to 1,000 output tokens per trial (two calls, medium effort), so roughly
+$0.025 per trial. The main grid is 200 × (6 × 4 + 2) = 5,200 trials, about $130, plus a
+judge call on the small fraction of answers the heuristic cannot classify. A second seed
+doubles it.
+
+## Analysis plan
+
+1. Cell table and intervals (`python -m vp.analysis results/*.jsonl`).
+2. H1: compare polite vs neutral cave rate at density 1.0 (and 0.9) by the overlap of
+   Wilson intervals, and by a two-proportion z-test on the counts.
+3. H2: fit the polite-arm cave rate as a logistic in density and in behavioral
+   reliance; compare transition widths.
+4. H3: read midpoint and width of the fit in reliance against the criteria above.
+5. H4: on open weights, the base-vs-instruct and all-heads-vs-induction comparison in
+   `docs/mechanism.md`.
+6. Robustness: repeat 1 to 3 on `syceval_medical`; report the rude and social arms as
+   the sign and specificity controls.
+
+## Exclusions
+
+- Trials refused by the model (either call) are dropped and counted per cell.
+- Answers the heuristic and the judge both classify as other or ambiguous are kept in
+  the first-answer accuracy denominator and excluded from the cave-rate numerator and
+  denominator.
+
+## Stopping rules
+
+The main grid runs to completion once started. The experiment stops early only if the
+density-0 noise floor of behavioral reliance exceeds 0.2, which would mean the model's
+sampling variance swamps the measure; in that case the run is restarted at a
+deterministic setting before any sweep is interpreted.
+
+## Amendments
+
+(none)

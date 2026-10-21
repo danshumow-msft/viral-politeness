@@ -1,8 +1,58 @@
 # viral-politeness
 Experiments on if politeness is a social context contagion.
 
-## Documents
+Hypothesis: polite phrases ("please", "thank you") are benign context contagions whose
+influence on a model's answers tracks *reliance* rather than usefulness, with a
+condensation threshold near 0.9 reliance. The measurable outcome is regressive
+sycophancy (caving to a wrong-answer rebuttal) as a function of politeness density.
+See [`PLAN.md`](PLAN.md) for the plan of record and status.
 
-- [`docs/references.md`](docs/references.md) — theory sketch, candidate sycophancy benchmarks, and the experiment outline (2026-10-21).
+## Layout
 
-Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion) (the conservation-law / condensation-knee results this project builds on).
+| Path | What |
+|---|---|
+| `PLAN.md` | plan of record, item status |
+| `docs/references.md` | theory sketch, candidate benchmarks with verified figures |
+| `docs/claim_bank.md` | why SycEval, what the vendored bank contains |
+| `docs/reliance.md` | the two reliance measures and how the 0.9 prediction is tested |
+| `docs/preregistration.md` | hypotheses, grid, sample size, analysis plan, stopping rules |
+| `docs/mechanism.md` | base-vs-instruct discriminator: copy circuit vs trained compliance |
+| `data/` | claim bank JSONL built from SycEval (`scripts/build_claim_bank.py`) |
+| `vp/` | library: claims, contexts (arms), scoring, reliance, analysis |
+| `experiments/run_api.py` | density sweep on chat models over the Claude API |
+| `experiments/run_openweights.py` | same protocol on Hugging Face models, with attention |
+| `tests/` | offline unit tests |
+
+## Setup
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt anthropic         # API arm
+pip install -r requirements-openweights.txt       # open-weights arm (torch, transformers)
+python -m pytest -q
+```
+
+## Run
+
+```bash
+# see the exact conversation a trial builds, no API calls
+python -m experiments.run_api --dry-run --n-claims 1 --densities 0.5 --arms polite
+
+# pilot: 10 claims, full grid, one seed (~0.26k trials, ~$7 on claude-opus-5-5)
+ANTHROPIC_API_KEY=... python -m experiments.run_api --n-claims 10 --out results/pilot.jsonl
+
+# analyze
+python -m vp.analysis results/pilot.jsonl --out results/pilot_summary.json
+
+# open weights (GPU recommended; 0.5B runs on CPU)
+python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B-Instruct --n-claims 5
+python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B --base --n-claims 5
+```
+
+Status: the harness is unit-tested offline; no model has been queried yet. The first
+live step is the pilot above, which checks the heuristic scorer's classification rate
+and the first-answer accuracy that sets the per-cell sample size
+(`docs/preregistration.md`).
+
+Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion)
+(the conservation-law / condensation-knee results this project builds on).
