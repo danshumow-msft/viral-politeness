@@ -23,7 +23,7 @@ See [`PLAN.md`](PLAN.md) for the plan of record and status.
 | `experiments/run_openweights.py` | same protocol on Hugging Face models, with attention |
 | `experiments/rescore.py` | re-classify an existing results file with the current scorer and judge |
 | `results_log.md` | every live run, what it found, what changed because of it |
-| `data/runs/` | committed per-trial records and summaries |
+| `data/runs/` | run summaries, small per-trial record files, and pointers to the release assets holding the large ones |
 | `tests/` | offline unit tests |
 
 ## Setup

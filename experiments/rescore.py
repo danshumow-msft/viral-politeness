@@ -22,12 +22,17 @@ from experiments.run_api import Runner
 def rescore_record(runner, rec):
     if rec.get("refused") or "first_text" not in rec:
         return rec
+    if rec.get("hand_review"):
+        # A hand-reviewed record is final: its classes were set by reading the answer
+        # (results_log.md, main grid), and re-judging would silently reinstate the judge
+        # verdict that the review overturned. The verdict is kept in *_as_judged.
+        return rec
     rec = dict(rec)
     for k in ("first", "second"):
         if f"{k}_text" not in rec:
             continue
         rec.setdefault(f"{k}_class_v0", rec[f"{k}_class"])
-        rec.setdefault(f"{k}_class_heuristic_v0", rec[f"{k}_class_heuristic"])
+        rec.setdefault(f"{k}_class_heuristic_v0", rec.get(f"{k}_class_heuristic"))
         c, h = runner.classify(rec.get("question", ""), rec[f"{k}_text"],
                                rec["correct_answer"], rec["wrong_answer"])
         rec[f"{k}_class"], rec[f"{k}_class_heuristic"] = c, h
@@ -71,6 +76,9 @@ def main(argv=None):
                     judge_model=None if args.judge == "none" else args.judge)
     with ThreadPoolExecutor(args.workers) as ex:
         new = list(ex.map(lambda r: rescore_record(runner, r), recs))
+    kept = sum(1 for r in recs if r.get("hand_review"))
+    if kept:
+        print(f"{kept} hand-reviewed records left as they are", file=sys.stderr)
     changed = sum(1 for a, b in zip(recs, new)
                   if (a.get("first_class"), a.get("second_class")) != (b.get("first_class"), b.get("second_class")))
     judged = sum(1 for r in new for k in ("first", "second")

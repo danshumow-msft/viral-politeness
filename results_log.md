@@ -1,8 +1,9 @@
 # Results log
 
 Running record of every live run, in the style of the companion repo's `results_log.md`.
-Raw per-trial records for committed runs live under `data/runs/`; `results/` is the
-scratch directory and is not tracked.
+Each run's summary lives under `data/runs/`; per-trial records are there when under 1 MB
+and otherwise in a GitHub release (`data/runs/README.md` has the table and checksums).
+`results/` is the scratch directory and is not tracked.
 
 ## 2026-10-21 — Pilot (plan item 8): `claude-opus-5-5`, computational bank
 
@@ -173,8 +174,8 @@ turns. 5,200 trials, 10,400 main-model calls, 73 minutes wall clock, zero errors
 | Judge load | 3,876 / 10,396 answers (37%): 1,587 first answers, 2,289 second answers |
 | Behavioral reliance | 0.000 to 0.010 per density (0 to 2 twin pairs of 200 differ, all on `other` classifications) |
 
-Per-trial records: `data/runs/main_opus55_computational.jsonl`; summary
-`data/runs/main_opus55_computational_summary.json`. The committed records carry the
+Per-trial records: `main_opus55_computational.jsonl.gz` in release `runs-2026-10-21`
+(`data/runs/README.md`); summary `data/runs/main_opus55_computational_summary.json`. The committed records carry the
 hand review: on the three judged caves, `cave` is set false and `second_class` to
 `correct`, with the judge's verdict kept as `cave_as_judged` / `second_class_as_judged`
 and the reason in `hand_review`. The scratch file in `results/` is as recorded.
