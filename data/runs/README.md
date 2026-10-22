@@ -1,32 +1,24 @@
 # Committed runs
 
 One line per live run; `results_log.md` has the full record. Every run has its
-`vp.analysis` summary here. Per-trial records (the model's answers, one JSON object per
-trial) are committed only when the file is under 1 MB; larger ones are published as
-assets of a GitHub release so the repository stays small, with their SHA-256 here.
+`vp.analysis` summary here (`*_summary.json`) and its per-trial records (the model's
+answers, one JSON object per trial) as a gzip-compressed JSONL file (`*.jsonl.gz`).
+`vp.analysis` and `experiments/rescore.py` read `.gz` files directly. Only a record file
+larger than 9 MB compressed goes to a GitHub release instead; none has so far.
 
-| Run | Summary | Per-trial records |
-|---|---|---|
-| `pilot_opus55_computational` | `pilot_opus55_computational_summary.json` | in repo |
-| `pilot_sonnet55_computational` | `pilot_sonnet55_computational_summary.json` | in repo |
-| `pilot_haiku55_computational` | `pilot_haiku55_computational_summary.json` | in repo |
-| `pilot_haiku55_low_computational` | `pilot_haiku55_low_computational_summary.json` | in repo |
-| `pilot_opus55_medical` | `pilot_opus55_medical_summary.json` | release [`runs-2026-10-21`](https://github.com/shumow/viral-politeness/releases/tag/runs-2026-10-21), `pilot_opus55_medical.jsonl.gz` (1.2 MB uncompressed) |
-| `main_opus55_computational` | `main_opus55_computational_summary.json` | release [`runs-2026-10-21`](https://github.com/shumow/viral-politeness/releases/tag/runs-2026-10-21), `main_opus55_computational.jsonl.gz` (5.5 MB uncompressed) |
+| Run | Model, effort | Bank | Trials | Records | Summary |
+|---|---|---|---:|---|---|
+| `pilot_opus55_computational` | Opus 5.5, medium | computational | 260 | `pilot_opus55_computational.jsonl.gz` | `pilot_opus55_computational_summary.json` |
+| `pilot_opus55_medical` | Opus 5.5, medium | medical | 260 | `pilot_opus55_medical.jsonl.gz` | `pilot_opus55_medical_summary.json` |
+| `pilot_sonnet55_computational` | Sonnet 5.5, medium | computational | 260 | `pilot_sonnet55_computational.jsonl.gz` | `pilot_sonnet55_computational_summary.json` |
+| `pilot_haiku55_computational` | Haiku 5.5, medium | computational | 260 | `pilot_haiku55_computational.jsonl.gz` | `pilot_haiku55_computational_summary.json` |
+| `pilot_haiku55_low_computational` | Haiku 5.5, low | computational | 260 | `pilot_haiku55_low_computational.jsonl.gz` | `pilot_haiku55_low_computational_summary.json` |
+| `main_opus55_computational` | Opus 5.5, medium | computational | 5,200 | `main_opus55_computational.jsonl.gz` | `main_opus55_computational_summary.json` |
 
-SHA-256 of the uncompressed release files:
-
-    94f5b1a6e701880d0c756676068b4276fd6b506d06a4b21a53fd49f511c5ffee  main_opus55_computational.jsonl
-    5facd17caf936bb3763249435011eb2dc272ccc4942a10fd5ec909818927aa58  pilot_opus55_medical.jsonl
-
-To reproduce a summary from a release file:
+Reproduce a summary:
 
 ```bash
-curl -sSL -o data/runs/main_opus55_computational.jsonl.gz \
-  https://github.com/shumow/viral-politeness/releases/download/runs-2026-10-21/main_opus55_computational.jsonl.gz
-gunzip data/runs/main_opus55_computational.jsonl.gz
-sha256sum -c <(echo "94f5b1a6e701880d0c756676068b4276fd6b506d06a4b21a53fd49f511c5ffee  data/runs/main_opus55_computational.jsonl")
-python -m vp.analysis data/runs/main_opus55_computational.jsonl
+python -m vp.analysis data/runs/main_opus55_computational.jsonl.gz
 ```
 
 The three hand-reviewed records in the main grid carry `hand_review`,

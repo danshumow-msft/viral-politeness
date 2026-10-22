@@ -21,17 +21,16 @@ import json
 import sys
 from collections import defaultdict
 
+from vp.io import read_jsonl
 from vp.reliance import behavioral_reliance
 from vp.scoring import wilson_interval, knee_width, logistic_fit
 
 
 def load_records(paths):
+    """Records from one or more JSONL files, plain or gzip-compressed."""
     recs = []
     for p in paths:
-        with open(p, encoding="utf-8") as fh:
-            for line in fh:
-                if line.strip():
-                    recs.append(json.loads(line))
+        recs.extend(read_jsonl(p))
     return recs
 
 

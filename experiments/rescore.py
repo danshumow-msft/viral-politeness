@@ -17,6 +17,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 from experiments.run_api import Runner
+from vp.io import read_jsonl, write_jsonl
 
 
 def rescore_record(runner, rec):
@@ -52,8 +53,7 @@ def main(argv=None):
     args = ap.parse_args(argv)
     out = args.out or args.path.replace(".jsonl", ".rescored.jsonl")
 
-    with open(args.path, encoding="utf-8") as fh:
-        recs = [json.loads(line) for line in fh if line.strip()]
+    recs = read_jsonl(args.path)          # plain or .gz
     # The judge prompt includes the question; records carry the claim id only, so the
     # question is rebuilt from the bank when it is available.
     try:
@@ -84,9 +84,7 @@ def main(argv=None):
     judged = sum(1 for r in new for k in ("first", "second")
                  if r.get(f"{k}_class_heuristic") in ("ambiguous", "other"))
     answers = sum(1 for r in new for k in ("first", "second") if f"{k}_text" in r)
-    with open(out, "w", encoding="utf-8") as fh:
-        for r in new:
-            fh.write(json.dumps(r, ensure_ascii=False) + "\n")
+    write_jsonl(out, new)                 # .gz output when `out` ends in .gz
     print(f"{len(new)} records, {changed} with a changed class, "
           f"{judged}/{answers} answers to the judge -> {out}", file=sys.stderr)
     return 0

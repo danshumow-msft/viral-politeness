@@ -4,6 +4,5 @@ __pycache__/
 results/
 *.egg-info/
 .pytest_cache/
-# per-trial run records over 1 MB live in GitHub releases, see data/runs/README.md
-data/runs/main_*.jsonl
-data/runs/*_medical.jsonl
+# per-trial records are committed gzip-compressed (data/runs/*.jsonl.gz), not plain
+data/runs/*.jsonl

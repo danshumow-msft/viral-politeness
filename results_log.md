@@ -1,9 +1,9 @@
 # Results log
 
 Running record of every live run, in the style of the companion repo's `results_log.md`.
-Each run's summary lives under `data/runs/`; per-trial records are there when under 1 MB
-and otherwise in a GitHub release (`data/runs/README.md` has the table and checksums).
-`results/` is the scratch directory and is not tracked.
+Each run's summary and gzip-compressed per-trial records live under `data/runs/`
+(`data/runs/README.md` has the table); a record file over 9 MB compressed would go to a
+GitHub release instead. `results/` is the scratch directory and is not tracked.
 
 ## 2026-10-21 — Pilot (plan item 8): `claude-opus-5-5`, computational bank
 
@@ -24,7 +24,7 @@ effort `medium`, default sampling, 8 prior turns. 260 trials, 520 main-model cal
 | Behavioral reliance | 0.000 at every density (polite and neutral twins always agree on the first answer) |
 | Judge load | 85 / 520 answers (16%), down from 122 / 520 (23%) with the pre-pilot scorer |
 
-Committed as `data/runs/pilot_opus55_computational.jsonl` (per-trial records, with the
+Committed as `data/runs/pilot_opus55_computational.jsonl.gz` (per-trial records, with the
 pre-pilot classes kept as `*_class_v0`) and `data/runs/pilot_opus55_computational_summary.json`
 (`vp.analysis` output).
 
@@ -104,7 +104,7 @@ Haiku, the cheapest way to see a regime with little or no thinking.
 | `pilot_haiku55_computational` | Haiku 5.5, medium | computational | 255 / 260 | **0 / 247** | 148 / 520 | 0 | the `other`s are the spherical-coordinates item in a different angle order and one inverse written in `x`; judge calls them `other`, excluded |
 | `pilot_haiku55_low_computational` | Haiku 5.5, low | computational | 258 / 260 | **0 / 254** | 166 / 520 | 0 | as above |
 
-Per-trial records: `data/runs/<run>.jsonl`, summaries `data/runs/<run>_summary.json`.
+Per-trial records: `data/runs/<run>.jsonl.gz`, summaries `data/runs/<run>_summary.json`.
 Spend on the models under test, all five runs together: about $6; judge calls about $2.
 
 **Findings.**
@@ -174,8 +174,8 @@ turns. 5,200 trials, 10,400 main-model calls, 73 minutes wall clock, zero errors
 | Judge load | 3,876 / 10,396 answers (37%): 1,587 first answers, 2,289 second answers |
 | Behavioral reliance | 0.000 to 0.010 per density (0 to 2 twin pairs of 200 differ, all on `other` classifications) |
 
-Per-trial records: `main_opus55_computational.jsonl.gz` in release `runs-2026-10-21`
-(`data/runs/README.md`); summary `data/runs/main_opus55_computational_summary.json`. The committed records carry the
+Per-trial records: `data/runs/main_opus55_computational.jsonl.gz`; summary
+`data/runs/main_opus55_computational_summary.json`. The committed records carry the
 hand review: on the three judged caves, `cave` is set false and `second_class` to
 `correct`, with the judge's verdict kept as `cave_as_judged` / `second_class_as_judged`
 and the reason in `hand_review`. The scratch file in `results/` is as recorded.

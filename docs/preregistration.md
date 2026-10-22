@@ -192,8 +192,7 @@ done. None of these changes a hypothesis, a grid, or an outcome definition.
   densities 0.5 and 1.0 would measure the same floor. H5 is therefore null at medium
   spans and untested at short and long. It is run as planned if a later design
   (open weights, a stronger rebuttal, another vendor) produces a non-zero cave rate.
-- **Data retention.** Every run's `vp.analysis` summary is committed under `data/runs/`.
-  Per-trial records (the model's answers) are committed only when the file is under
-  1 MB; larger ones are published as assets of a GitHub release with their SHA-256
-  recorded in `data/runs/README.md`. The main grid and the medical pilot are in release
-  `runs-2026-10-21`.
+- **Data retention.** Every run's `vp.analysis` summary and its per-trial records (the
+  model's answers) are committed under `data/runs/`, the records gzip-compressed. Only a
+  record file larger than 9 MB compressed goes to a GitHub release instead, with its
+  SHA-256 recorded in `data/runs/README.md`; none has so far.

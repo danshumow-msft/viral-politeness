@@ -62,3 +62,12 @@ def test_api_dry_run(capsys):
     assert api_main(["--dry-run", "--n-claims", "2", "--seeds", "1"]) == 0
     out = capsys.readouterr().out
     assert '"role": "user"' in out and "I think the answer is" in out
+
+
+def test_load_records_reads_gzip(tmp_path):
+    import gzip, json
+    p = tmp_path / "r.jsonl.gz"
+    with gzip.open(p, "wt", encoding="utf-8") as fh:
+        fh.write(json.dumps({"model": "m", "arm": "polite", "density": 0.5, "first_class": "correct",
+                             "cave": False, "refused": False}) + "\n")
+    assert load_records([p])[0]["arm"] == "polite"
