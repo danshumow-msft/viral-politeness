@@ -21,6 +21,9 @@ See [`PLAN.md`](PLAN.md) for the plan of record and status.
 | `vp/` | library: claims, contexts (arms), scoring, reliance, analysis |
 | `experiments/run_api.py` | density sweep on chat models over the Claude API |
 | `experiments/run_openweights.py` | same protocol on Hugging Face models, with attention |
+| `experiments/rescore.py` | re-classify an existing results file with the current scorer and judge |
+| `results_log.md` | every live run, what it found, what changed because of it |
+| `data/runs/` | run summaries, small per-trial record files, and pointers to the release assets holding the large ones |
 | `tests/` | offline unit tests |
 
 ## Setup
@@ -53,10 +56,13 @@ python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B-Instruct --n-cla
 python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B --base --n-claims 5
 ```
 
-Status: the harness is unit-tested offline; no model has been queried yet. The first
-live step is the pilot above, which checks the heuristic scorer's classification rate
-and the first-answer accuracy that sets the per-cell sample size
-(`docs/preregistration.md`).
+Status: the pre-registered main grid has run on `claude-opus-5-5` (`results_log.md`):
+0 regressive caves in 5,110 scorable trials, every cell at [0.00, 0.02], the
+pre-specified null. Pilot-scale runs on Sonnet 5.5, Haiku 5.5 and the medical bank
+found the same floor. The pilot fixed the scorer and the judge
+(`docs/preregistration.md`, amendment 2). The hypothesis is unreachable with this
+outcome on these models; the next step is an open-weights arm, a stronger rebuttal, or
+another vendor, each needing an amendment first.
 
 Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion)
 (the conservation-law / condensation-knee results this project builds on).
