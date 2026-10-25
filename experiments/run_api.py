@@ -33,7 +33,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from vp.claims import load_claims
 from vp.contexts import ARMS, SPAN_LENGTHS, build_context, rebuttal_text
-from vp.scoring import classify
+from vp.io import read_jsonl, open_text
+from vp.records import completed_trials, trial_identity, validate_records
+from vp.scoring import classify, scoring_protocol
 
 JUDGE_SCHEMA = {
     "type": "object",
@@ -64,7 +66,8 @@ JUDGE_PROMPT = (
 
 
 def trial_key(model, claim_id, arm, density, seed, span_length="medium"):
-    return f"{model}|{claim_id}|{arm}|{density}|{seed}|{span_length}"
+    return trial_identity(dict(model=model, claim_id=claim_id, arm=arm, density=density,
+                               seed=seed, span_length=span_length))
 
 
 def text_of(response) -> str:
@@ -72,9 +75,20 @@ def text_of(response) -> str:
 
 
 class Runner:
-    def __init__(self, client, model, effort, max_tokens, judge_model=None):
+    def __init__(self, client, model, effort, max_tokens, judge_model=None, *, bank=None):
         self.client, self.model, self.effort, self.max_tokens = client, model, effort, max_tokens
-        self.judge_model = judge_model
+        self.judge_model, self.bank = judge_model, bank
+
+    def protocol(self, n_turns):
+        return dict(version=1, runner="api", bank=self.bank, context_version=1,
+                    rebuttal="syceval-simple-v1", n_turns=n_turns, effort=self.effort,
+                    max_tokens=self.max_tokens, sampling="provider-default")
+
+    def scoring_protocol(self):
+        return scoring_protocol(judge_model=self.judge_model,
+                                judge_prompt=JUDGE_PROMPT if self.judge_model else None,
+                                judge_effort="low" if self.judge_model else None,
+                                judge_max_tokens=4096 if self.judge_model else None)
 
     def ask(self, messages):
         kw = dict(model=self.model, max_tokens=self.max_tokens, messages=messages)
@@ -121,6 +135,8 @@ class Runner:
         rec = dict(model=self.model, claim_id=claim.id, arm=arm, density=density, seed=seed,
                    span_length=span_length, extra_words=trial.extra_words,
                    n_turns=n_turns, n_spans=trial.n_spans, span_positions=list(trial.span_positions),
+                   phrase_indices=list(trial.phrase_indices), protocol=self.protocol(n_turns),
+                   scoring_protocol=self.scoring_protocol(),
                    effort=self.effort, wrong_answer=wrong, correct_answer=claim.correct_answer,
                    refused=False, ts=time.time())
         r1 = self.ask(trial.messages)
@@ -137,7 +153,9 @@ class Runner:
         msgs = trial.messages + [{"role": "assistant", "content": a1},
                                  {"role": "user", "content": rebuttal_text(target, trial.instruction)}]
         r2 = self.ask(msgs)
-        rec.update(second_stop=r2.stop_reason,
+        if r2.model != r1.model:
+            raise ValueError(f"incompatible served_model across calls: {r1.model!r}, {r2.model!r}")
+        rec.update(second_stop=r2.stop_reason, served_model2=r2.model,
                    usage2=dict(input=r2.usage.input_tokens, output=r2.usage.output_tokens))
         if r2.stop_reason == "refusal":
             rec["refused"] = True
@@ -183,6 +201,11 @@ def main(argv=None):
     cells = [(c, arm, d, s, L) for c in claims for d in densities
              for L in (lengths if d > 0 else lengths[:1])
              for arm in (arms if d > 0 else arms[:2]) for s in range(args.seeds)]
+    planned = [dict(model=args.model, claim_id=c.id, arm=arm, density=d, seed=s, span_length=L)
+               for c, arm, d, s, L in cells]
+    if not planned:
+        raise ValueError("requested grid must contain at least one trial")
+    validate_records(planned)
     print(f"{len(claims)} claims x {len(densities)} densities x {len(arms)} arms x "
           f"{len(lengths)} lengths x {args.seeds} seeds -> {len(cells)} trials (2 calls each)",
           file=sys.stderr)
@@ -194,26 +217,21 @@ def main(argv=None):
         print(json.dumps({"rebuttal": rebuttal_text(c.wrong_answer(), t.instruction)}))
         return 0
 
-    import anthropic
-    client = anthropic.Anthropic()
-    runner = Runner(client, args.model, args.effort or None, args.max_tokens,
-                    None if args.judge == "none" else args.judge)
-
-    done = set()
-    if os.path.exists(out):
-        with open(out) as fh:
-            for line in fh:
-                if line.strip():
-                    r = json.loads(line)
-                    done.add(trial_key(r["model"], r["claim_id"], r["arm"], r["density"], r["seed"],
-                                       r.get("span_length", "medium")))
+    runner = Runner(None, args.model, args.effort or None, args.max_tokens,
+                    None if args.judge == "none" else args.judge, bank=args.bank)
+    existing = read_jsonl(out) if os.path.exists(out) else []
+    done = completed_trials(existing, args.model, runner.protocol(args.n_turns), runner.scoring_protocol())
     todo = [(c, arm, d, s, L) for (c, arm, d, s, L) in cells
             if trial_key(args.model, c.id, arm, d, s, L) not in done]
     print(f"{len(done)} done, {len(todo)} to run -> {out}", file=sys.stderr)
+    if not todo:
+        return 0
+    import anthropic
+    runner.client = anthropic.Anthropic()
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     lock = threading.Lock()
     n_ok = n_err = 0
-    with open(out, "a") as fh, ThreadPoolExecutor(args.workers) as ex:
+    with open_text(out, "a") as fh, ThreadPoolExecutor(args.workers) as ex:
         futs = {ex.submit(runner.run_trial, c, arm, d, s, args.n_turns, L): (c.id, arm, d, s, L)
                 for (c, arm, d, s, L) in todo}
         for fut in as_completed(futs):

@@ -24,8 +24,10 @@ python -m vp.analysis data/runs/main_opus55_computational.jsonl.gz
 ## Analysis versions
 
 The committed `*_summary.json` files are historical version-1 outputs. Current
-analysis emits `analysis_version: 2` and `outcome_contract_version: 1`, with separate
-scorable denominators and exclusion/coverage counts. Rates with no scorable trials
+analysis emits `analysis_version: 3`, `outcome_contract_version: 2`, and
+`secondary_annotation_version: 1`. Version 2 introduced separate scorable denominators
+and exclusion/coverage counts; version 3 retains them and adds independent secondary
+summaries and protocol/pairing diagnostics. Rates with no scorable trials
 are JSON null, printed as `-`; derived exchange rates and fit weights use scorable
 adoption counts. See the [outcome contract](../../docs/outcomes.md).
 
@@ -33,9 +35,11 @@ For the main run, current aggregation preserves 5,112 initially-correct labels b
 excludes 27 unclassifiable second answers from the adoption denominator, giving
 0 adoptions in 5,085 scorable trials. The [results log](../../results_log.md) records
 the retrospective correction across all six runs. No model was rerun or rejudged.
-Write any new derived output to a versioned name such as `*_summary_v2.json`, not
-over the historical summaries. Pairing/protocol validation and fit-identifiability
-improvements remain follow-up work.
+Write any new derived output to a versioned name such as `*_summary_v3.json`, not
+over the historical summaries. [Protocol checks](../../docs/protocols.md) reject
+duplicate/incompatible trials and report missing/refused twins. Legacy metadata
+remains explicitly unverified, and fit-identifiability improvements remain open.
+No committed run has secondary annotations; its secondary rates are null, not zero.
 
 The three hand-reviewed records in the main grid carry `hand_review`,
 `cave_as_judged` and `second_class_as_judged`; `experiments/rescore.py` leaves them

@@ -15,12 +15,16 @@ import argparse
 import json
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 from experiments.run_api import Runner
+from vp.annotations import validate_annotation
 from vp.io import read_jsonl, write_jsonl
+from vp.records import validate_records
 
 
 def rescore_record(runner, rec):
+    validate_annotation(rec)
     if rec.get("refused") or "first_text" not in rec:
         return rec
     if rec.get("hand_review"):
@@ -44,6 +48,17 @@ def rescore_record(runner, rec):
     return rec
 
 
+def scoring_provenance(rec, protocol):
+    """Record configured rescoring without erasing prior configurations or hand review."""
+    history = rec.get("scoring_history", [])
+    if not isinstance(history, list) or any(p is not None and not isinstance(p, dict) for p in history):
+        raise ValueError("scoring_history must be a list of prior protocol objects or null")
+    if rec.get("scoring_protocol") == protocol:
+        return rec
+    return dict(rec, scoring_protocol=protocol,
+                scoring_history=[*history, rec.get("scoring_protocol")])
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("path")
@@ -52,8 +67,13 @@ def main(argv=None):
     ap.add_argument("--workers", type=int, default=6)
     args = ap.parse_args(argv)
     out = args.out or args.path.replace(".jsonl", ".rescored.jsonl")
+    if Path(out).resolve() == Path(args.path).resolve():
+        raise ValueError("rescoring requires a distinct output file; preserve the source records")
 
     recs = read_jsonl(args.path)          # plain or .gz
+    validate_records(recs)
+    for rec in recs:
+        validate_annotation(rec)
     # The judge prompt includes the question; records carry the claim id only, so the
     # question is rebuilt from the bank when it is available.
     try:
@@ -76,6 +96,7 @@ def main(argv=None):
                     judge_model=None if args.judge == "none" else args.judge)
     with ThreadPoolExecutor(args.workers) as ex:
         new = list(ex.map(lambda r: rescore_record(runner, r), recs))
+    new = [scoring_provenance(r, runner.scoring_protocol()) for r in new]
     kept = sum(1 for r in recs if r.get("hand_review"))
     if kept:
         print(f"{kept} hand-reviewed records left as they are", file=sys.stderr)

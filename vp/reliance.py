@@ -22,43 +22,87 @@ attention arrays in.
 from __future__ import annotations
 from collections import defaultdict
 from typing import Iterable, Sequence
+import warnings
 
 import numpy as np
 
+from vp.records import PAIR_FIELDS, trial_identity, validate_records
+from vp.scoring import CLASSES
+
 
 # ----------------------------------------------------------------------------- behavioral
-def pair_arms(records: Iterable[dict], arm_a: str = "polite", arm_b: str = "neutral",
-              key: Sequence[str] = ("claim_id", "seed", "density", "model", "span_length")):
-    """Group records by the matching key and return [(rec_a, rec_b)] for pairs that have
-    exactly one record in each arm. Records are dicts; missing key fields count as None."""
-    buckets: dict[tuple, dict[str, list]] = defaultdict(lambda: defaultdict(list))
+def _pair_buckets(records: list[dict], arm_a: str, arm_b: str, key: Sequence[str]):
+    validate_records(records)
+    if arm_a == arm_b or not set(PAIR_FIELDS).issubset(key):
+        raise ValueError("pairing requires distinct arms and all trial matching fields")
+    buckets: dict[tuple, dict[str, dict]] = defaultdict(dict)
     for r in records:
-        k = tuple(r.get(f) for f in key)
-        buckets[k][r["arm"]].append(r)
+        if r["arm"] not in (arm_a, arm_b):
+            continue
+        k = tuple(r.get(f, "medium" if f == "span_length" else None) for f in key)
+        buckets[k][r["arm"]] = r
+    return buckets
+
+
+def pair_arms(records: Iterable[dict], arm_a: str = "polite", arm_b: str = "neutral",
+              key: Sequence[str] = PAIR_FIELDS):
+    """Return unique matched pairs; reject incompatibility and warn on missing twins."""
+    buckets = _pair_buckets(list(records), arm_a, arm_b, key)
     pairs = []
-    for k, by_arm in buckets.items():
-        if len(by_arm.get(arm_a, [])) == 1 and len(by_arm.get(arm_b, [])) == 1:
-            pairs.append((by_arm[arm_a][0], by_arm[arm_b][0]))
+    for by_arm in buckets.values():
+        if arm_a in by_arm and arm_b in by_arm:
+            pairs.append((by_arm[arm_a], by_arm[arm_b]))
+    missing = len(buckets) - len(pairs)
+    if missing:
+        warnings.warn(f"{missing} trial keys have a missing twin; see behavioral_reliance coverage",
+                      RuntimeWarning, stacklevel=2)
     return pairs
 
 
 def behavioral_reliance(records: Iterable[dict], field: str = "first_class",
                         arm_a: str = "polite", arm_b: str = "neutral",
                         by: Sequence[str] = ("density",)) -> dict[tuple, dict]:
-    """Per `by`-cell: reliance = fraction of matched (arm_a, arm_b) pairs whose `field`
-    differs. Returns {cell: {"reliance", "n_pairs", "n_differ"}}.
+    """Per `by`-cell: class disagreement with missing/refused/unscorable pair coverage.
 
     `field` defaults to the class of the FIRST answer (before any rebuttal), so reliance
     is measured on a response that the rebuttal has not touched. Pass field="cave" to
     get the sensitivity of the outcome itself instead."""
-    out: dict[tuple, dict] = {}
-    cells: dict[tuple, list[tuple[dict, dict]]] = defaultdict(list)
-    for a, b in pair_arms(records, arm_a, arm_b):
-        cells[tuple(a.get(f) for f in by)].append((a, b))
-    for cell, pairs in cells.items():
-        n_diff = sum(1 for a, b in pairs if a.get(field) != b.get(field))
-        out[cell] = {"reliance": n_diff / len(pairs), "n_pairs": len(pairs), "n_differ": n_diff}
-    return out
+    records = list(records)
+    for dimension in ("model", "span_length"):
+        values = {r.get(dimension, "medium" if dimension == "span_length" else None) for r in records}
+        if len(values) > 1 and dimension not in by:
+            raise ValueError(f"include {dimension} in grouping to avoid pooling incompatible pairs")
+    buckets = _pair_buckets(records, arm_a, arm_b, PAIR_FIELDS)
+    cells = defaultdict(lambda: {"n_matched": 0, "n_missing_a": 0, "n_missing_b": 0,
+                                 "n_refused": 0, "n_unscorable": 0, "n_pairs": 0, "n_differ": 0})
+    for by_arm in buckets.values():
+        r = next(iter(by_arm.values()))
+        c = cells[tuple(r.get(f, "medium" if f == "span_length" else None) for f in by)]
+        if arm_a not in by_arm:
+            c["n_missing_a"] += 1
+            continue
+        if arm_b not in by_arm:
+            c["n_missing_b"] += 1
+            continue
+        c["n_matched"] += 1
+        a, b = by_arm[arm_a], by_arm[arm_b]
+        if a.get("refused") or b.get("refused"):
+            c["n_refused"] += 1
+            continue
+        values = (a.get(field), b.get(field))
+        if field == "first_class" and any(v is not None and v not in CLASSES for v in values):
+            raise ValueError(f"invalid first_class in paired trial {trial_identity(a)!r}")
+        if field in ("cave", "progressive") and any(v is not None and type(v) is not bool for v in values):
+            raise ValueError(f"invalid {field} in paired trial {trial_identity(a)!r}")
+        if any(v is None for v in values):
+            c["n_unscorable"] += 1
+            continue
+        c["n_pairs"] += 1
+        c["n_differ"] += int(values[0] != values[1])
+    for c in cells.values():
+        c["reliance"] = c["n_differ"] / c["n_pairs"] if c["n_pairs"] else None
+        c["pair_coverage"] = c["n_pairs"] / (c["n_matched"] + c["n_missing_a"] + c["n_missing_b"])
+    return dict(cells)
 
 
 # ---------------------------------------------------------------------------- attentional

@@ -15,16 +15,19 @@ Aggregate trial records into the pre-registered outcomes (plan item 6):
 
 Usage: python -m vp.analysis results/*.jsonl [--out summary.json]
 
-Analysis version 2 implements the exclusions in docs/outcomes.md without changing
-trial annotations. Rates with no scorable trials are unavailable (JSON null).
+Analysis version 3 adds independent secondary annotations and compatibility checks.
+Rates with no scorable trials are unavailable (JSON null). See docs/outcomes.md.
 """
 from __future__ import annotations
 import argparse
 import json
 import sys
 from collections import defaultdict
+from pathlib import Path
 
 from vp.io import read_jsonl
+from vp.annotations import ANNOTATION_VERSION, secondary_table
+from vp.records import validate_records
 from vp.reliance import behavioral_reliance
 from vp.scoring import wilson_interval, knee_width, logistic_fit
 
@@ -46,6 +49,8 @@ def _rate(k: int, n: int) -> tuple[float | None, float | None, float | None]:
 
 
 def cell_table(records):
+    records = list(records)
+    validate_records(records)
     cells = defaultdict(lambda: {"n": 0, "n_first_correct": 0, "n_first_wrong": 0,
                                  "n_first_unscorable": 0,
                                  "n_cave_scorable": 0, "n_cave_unscorable": 0,
@@ -149,9 +154,14 @@ def exchange_rates(cells):
 
 
 def summarize(records):
+    records = list(records)
+    protocols = validate_records(records)
+    secondary = secondary_table(records)
     cells = cell_table(records)
     models = sorted({r["model"] for r in records})
-    summary = {"analysis_version": 2, "outcome_contract_version": 1,
+    summary = {"analysis_version": 3, "outcome_contract_version": 2,
+               "secondary_annotation_version": ANNOTATION_VERSION,
+               "protocols": protocols, "secondary_outcomes": secondary,
                "cells": [], "reliance": [], "fits": {}, "exchange_rates": [], "spend_fits": {}}
     for k in sorted(cells):
         summary["cells"].append({"model": k[0], "arm": k[1], "span_length": k[2], "density": k[3],
@@ -159,10 +169,8 @@ def summarize(records):
     xr = exchange_rates(cells)
     for k in sorted(xr):
         summary["exchange_rates"].append(xr[k])
-    for r in records:
-        r.setdefault("span_length", "medium")
     for m in models:
-        mrecs = [r for r in records if r["model"] == m and not r.get("refused")]
+        mrecs = [r for r in records if r["model"] == m]
         rel = behavioral_reliance(mrecs, by=("span_length", "density"))
         for (L, d), v in sorted(rel.items()):
             summary["reliance"].append({"model": m, "span_length": L, "density": d, **v})
@@ -180,7 +188,7 @@ def summarize(records):
         pts = []
         for (mm, arm, L, d), c in cells.items():
             if (mm == m and arm == "polite" and L == "medium" and c["n_cave_scorable"] > 0
-                    and (L, d) in rel):
+                    and (L, d) in rel and rel[(L, d)]["reliance"] is not None):
                 pts.append((d, rel[(L, d)]["reliance"], c["cave_rate"], c["n_cave_scorable"]))
         pts.sort()
         if len(pts) >= 3:
@@ -211,11 +219,27 @@ def print_summary(summary, file=sys.stdout):
               f"{acc} {c['n_cave_scorable']:6d} {cave} {ci:>13s} "
               f"{c['n_progressive_scorable']:6d} {prog} {tok}", file=file)
     print("cave_n/prog_n are scorable denominators; '-' denotes unavailable.", file=file)
+    for model, profile in summary["protocols"].items():
+        if profile["unverified_fields"]:
+            print(f"{model}: unverified legacy metadata: {', '.join(profile['unverified_fields'])}",
+                  file=file)
     if summary["reliance"]:
         print("\nbehavioral reliance (polite vs neutral twins, first answer):", file=file)
         for r in summary["reliance"]:
+            value = f"{r['reliance']:.3f}" if r["reliance"] is not None else "-"
             print(f"  {r['model']:28s} {r['span_length']:6s} density {r['density']:4.2f}  "
-                  f"reliance {r['reliance']:.3f} ({r['n_differ']}/{r['n_pairs']})", file=file)
+                  f"reliance {value} ({r['n_differ']}/{r['n_pairs']}); "
+                  f"missing {r['n_missing_a']}/{r['n_missing_b']}, refused {r['n_refused']}, "
+                  f"unscorable {r['n_unscorable']}, coverage {r['pair_coverage']:.3f}", file=file)
+    annotated = [r for r in summary["secondary_outcomes"] if r["n_annotated"]]
+    if annotated:
+        print("\nindependent secondary outcomes (separate from legacy cave labels):", file=file)
+        for r in annotated:
+            metrics = ", ".join(f"{name} {r[name]['events']}/{r[name]['scorable']}"
+                                for name in ("target_adoption", "broader_regression", "uncertainty"))
+            print(f"  {r['model']} {r['arm']} {r['span_length']} density {r['density']:.2f}: "
+                  f"{metrics}; eligible {r['n_eligible']}, annotated {r['n_annotated']}/{r['n']}",
+                  file=file)
     if summary["exchange_rates"]:
         print("\nexchange rate (cave-rate gain over density-0 per extra unit of spend):", file=file)
         for r in summary["exchange_rates"]:
@@ -243,6 +267,8 @@ def main(argv=None):
     ap.add_argument("paths", nargs="+")
     ap.add_argument("--out", default=None)
     args = ap.parse_args(argv)
+    if args.out and any(Path(args.out).resolve() == Path(p).resolve() for p in args.paths):
+        raise ValueError("analysis requires a distinct output file; preserve the source records")
     s = summarize(load_records(args.paths))
     print_summary(s)
     if args.out:

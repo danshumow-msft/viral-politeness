@@ -2,8 +2,9 @@
 
 Date: 2026-10-24.
 
-Status: in progress. The initial M1/M2 aggregation slice is implemented; the full
-package gates and later experiments remain open.
+Status: in progress. The initial M1/M2 aggregation slice, independent secondary
+annotation contract, and pairing/protocol guards are implemented. The full package
+gates and later experiments remain open.
 
 This plan turns the [assessment](assessment-2026-10-24.md) of revision
 [`1b7f773`](https://github.com/shumow/viral-politeness/tree/1b7f7734987c32281c34423407c6ca8f87d4e7b4)
@@ -81,9 +82,36 @@ independent offline packages may proceed in parallel after their common prerequi
   records, hand reviews, stored summaries, and the pre-registration are untouched.
   The [results log](../results_log.md) has the retrospective count reconciliation.
 
-This does **not** complete M1/M2: independent secondary-outcome annotations,
-serialization for those annotations, pairing/protocol validation, and further
-coverage/sensitivity analysis remain. No new data collection is authorized.
+This initial slice did not complete M1/M2. The next implemented slice is recorded
+below; no new data collection is authorized.
+
+### Progress: secondary contract and compatibility checks, 2026-10-25
+
+- The owner approved independent versioned annotations and visible exclusion of
+  missing/refused twins, with duplicate/incompatible trials rejected.
+- [Contract version 2](outcomes.md) defines the optional secondary-annotation schema,
+  source fingerprint, provenance, explicit processing statuses, and independently
+  scorable correctness/commitment/uncertainty. Analysis version 3 reports these
+  endpoints separately from unchanged legacy primary labels.
+- All committed records remain unannotated; their secondary rates are unavailable.
+  No automatic classifier, model judging, or retrospective label migration was added.
+- [Shared record checks](protocols.md) reject duplicate identities, incompatible
+  recorded configurations/references, and mismatched arm layouts. They preserve
+  unknown historical metadata as unverified instead of inventing it.
+- Pairing reports matched/missing/refused/unscorable counts and coverage. Missing
+  comparison fields no longer count as agreement. The main run retains 200 matched
+  pairs per density, with 198 usable pairs at density 0.9 after refusals.
+- Both runners record additive generation/scoring configurations and validate
+  resumes before importing clients or loading weights. Rescoring preserves secondary
+  source bindings, original hand reviews, and prior scoring configurations.
+- Offline fixtures and mocked runner tests cover the new contracts and preflight
+  failures; the six original datasets retain their corrected adoption counts.
+
+M1's serialization and readout definitions are implemented, but independent trusted
+annotations and blinded scorer validation still require M3. M2 still needs
+sensitivity analysis and publication of versioned reanalysis artifacts. Full
+expected-run manifests, immutable checkpoint/context provenance, and token matching
+remain M4 work; the incremental configuration metadata is not a replacement.
 
 ### M1. Define outcomes before changing the scorer
 
@@ -291,10 +319,11 @@ it as inconclusive and update the [mechanism note](mechanism.md) accordingly.
 
 ## First implementation slice and decision gates
 
-The first **M1 plus narrow M2** slice now separates the scorable denominator from
-first-answer accuracy and reconciles counts from existing records. Next, finish the
-secondary annotation contract and pairing/protocol checks before treating M1/M2 as
-complete. Scorer validation must not be inferred from the corrected arithmetic.
+The first two **M1/M2** slices now separate scorable denominators from first-answer
+accuracy, specify independent secondary annotations, and enforce recorded pairing/
+protocol compatibility. Next, design the blinded scorer audit and complete
+coverage/sensitivity analysis before treating the measurement pipeline as validated.
+Scorer validity must not be inferred from corrected arithmetic or serialization.
 
 Before advancing to live work, the owner must approve:
 

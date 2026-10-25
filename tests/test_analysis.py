@@ -31,6 +31,8 @@ def test_scorable_denominators_preserve_first_answer_accuracy():
         _trial(refused=True, first_stop="refusal"),
         _trial(refused=True, second_stop="refusal"),
     ]
+    for i, r in enumerate(records):
+        r["claim_id"] = f"c{i}"
     c = next(iter(cell_table(records).values()))
     assert c["n"] == 10 and c["n_refused"] == 2
     assert c["n_first_correct"] == 4 and c["n_first_wrong"] == 3
@@ -57,7 +59,7 @@ def test_missing_second_answer_is_not_a_scorable_hold():
 def test_endpoint_eligibility_uses_the_actual_rebuttal():
     records = [
         _trial(second="wrong", rebuttal_target="correct", cave=False),
-        _trial("wrong", "correct", rebuttal_target="wrong", progressive=False),
+        _trial("wrong", "correct", claim_id="d", rebuttal_target="wrong", progressive=False),
     ]
     c = next(iter(cell_table(records).values()))
     assert c["n_cave_ineligible"] == c["n_progressive_ineligible"] == 1
@@ -67,7 +69,7 @@ def test_endpoint_eligibility_uses_the_actual_rebuttal():
 
 
 def test_legacy_missing_rebuttal_target_uses_the_original_protocol():
-    records = [_trial(second="wrong"), _trial("wrong", "correct")]
+    records = [_trial(second="wrong"), _trial("wrong", "correct", claim_id="d")]
     for r in records:
         del r["rebuttal_target"]
     c = next(iter(cell_table(records).values()))
@@ -104,8 +106,8 @@ def test_invalid_rebuttal_target_is_reported():
 ])
 def test_unavailable_rates_are_null_and_printable(records, accuracy):
     s = summarize(records)
-    assert s["analysis_version"] == 2
-    assert s["outcome_contract_version"] == 1
+    assert s["analysis_version"] == 3
+    assert s["outcome_contract_version"] == 2
     for c in s["cells"]:
         assert c["first_accuracy"] == accuracy
         assert c["cave_rate"] is c["progressive_rate"] is None
@@ -179,16 +181,46 @@ def test_analysis_cli_writes_versioned_counts_without_changing_records(tmp_path)
     root = Path(__file__).resolve().parents[1]
     path = root / "data" / "runs" / "main_opus55_computational.jsonl.gz"
     original = path.read_bytes()
-    out = tmp_path / "summary_v2.json"
+    out = tmp_path / "summary_v3.json"
     completed = subprocess.run([sys.executable, "-m", "vp.analysis", str(path), "--out", str(out)],
                                cwd=root, check=True, capture_output=True, text=True)
     s = json.loads(out.read_text())
-    assert s["analysis_version"] == 2 and s["outcome_contract_version"] == 1
+    assert s["analysis_version"] == 3 and s["outcome_contract_version"] == 2
     assert sum(c["n_cave_scorable"] for c in s["cells"]) == 5085
     assert sum(c["n_cave_unscorable"] for c in s["cells"]) == 27
     assert all(c["progressive_rate"] is None for c in s["cells"])
+    assert all(c["broader_regression"]["rate"] is None for c in s["secondary_outcomes"])
+    assert sum(c["n_missing_annotation"] for c in s["secondary_outcomes"]) == 5198
+    row = next(r for r in s["reliance"] if r["density"] == 0.9)
+    assert row["n_matched"] == 200 and row["n_pairs"] == 198 and row["n_refused"] == 2
     assert path.read_bytes() == original
     assert "cave_n/prog_n are scorable denominators" in completed.stdout
+
+
+def test_summary_rejects_duplicate_files_before_aggregation(tmp_path):
+    path = tmp_path / "r.jsonl"
+    path.write_text(json.dumps(_trial()))
+    with pytest.raises(ValueError, match="duplicate"):
+        summarize(load_records([path, path]))
+
+
+def test_summary_does_not_mutate_legacy_length_or_metadata():
+    r = _trial()
+    del r["span_length"]
+    original = json.loads(json.dumps(r))
+    s = summarize([r])
+    assert s["cells"][0]["span_length"] == "medium" and r == original
+
+
+def test_cli_cannot_overwrite_its_source_records(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    path = tmp_path / "r.jsonl"
+    path.write_text(json.dumps(_trial()))
+    original = path.read_bytes()
+    completed = subprocess.run([sys.executable, "-m", "vp.analysis", str(path), "--out", str(path)],
+                               cwd=root, capture_output=True, text=True)
+    assert completed.returncode != 0 and "preserve the source" in completed.stderr
+    assert path.read_bytes() == original
 
 
 def _synthetic(tmp_path):

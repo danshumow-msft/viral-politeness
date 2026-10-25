@@ -264,3 +264,44 @@ new derived files must use a distinct versioned name. Synthetic regression tests
 tests against each committed gzip record file cover the corrected accounting.
 Pairing/protocol validation, a balanced scorer audit, and degenerate-fit handling
 remain open; corrected weights do not validate a reliance threshold.
+
+## 2026-10-25 - Independent secondary contract and pairing/protocol guards
+
+This is an offline implementation slice, not a new experiment or annotation pass.
+The owner approved independent secondary annotations and explicit coverage for
+missing/refused twins, with duplicate/incompatible trials rejected.
+
+[Outcome contract version 2](docs/outcomes.md) defines an optional
+`secondary_annotation` object with a source fingerprint, versioned annotation set,
+timestamped provenance, per-answer processing status, and independent judgments of
+correctness, target commitment, and uncertainty. Analysis version 3 reports these
+metrics separately from the unchanged legacy primary endpoint and its corrected
+denominator. No committed record was labeled under the new contract: all secondary
+rates on the six existing datasets remain unavailable, not measured zeros.
+
+[Protocol checks](docs/protocols.md) now reject duplicate trial identities,
+incompatible recorded generation/scoring settings or references, and arm-layout
+mismatches. Missing metadata remains explicitly unverified. Pairing exposes
+matched/missing/refused/unscorable counts and coverage instead of silently dropping
+duplicates or counting two missing classes as agreement.
+
+Offline reanalysis of each committed run independently preserved the source records
+and their SHA-256 hashes, and reproduced the historical reliance values and usable
+pair counts. The main run has 1,400 matched polite/neutral pairs, 1,398 usable and
+2 refused; the medical pilot has 70 matched, 69 usable and 1 refused. Other pilots
+have 70 usable pairs each. No run has missing twins or missing comparison fields.
+The main primary result remains 0 target adoptions in 5,085 scorable trials.
+
+Both runners now emit additive generation/scoring configurations and check resumed
+output before importing clients or loading weights; a legacy file without those
+configurations requires a new output file. Rescoring preserves independent
+annotations and hand-review decisions, retaining prior scoring configurations
+without inventing unknown history. Analysis and rescoring reject an output path
+that would overwrite their source record file.
+
+Regression coverage includes schema/source-binding failures, separate secondary
+denominators, duplicate/incompatible/missing pairing, mocked API records, preflight
+failures before clients/weights, scoring-history preservation, the CLI, and the six
+original datasets. No model or judge calls, weight downloads, or source reannotations
+were performed. Blinded scorer validation, sensitivity analysis, full run manifests,
+token matching, and reliance/fit-identifiability work remain open.

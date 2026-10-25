@@ -17,9 +17,48 @@ def test_behavioral_reliance_counts_disagreements():
         _rec("e", 0, "rude", 0.5, "wrong"),     # other arm, ignored
     ]
     r = behavioral_reliance(recs)
-    assert r[(0.5,)] == {"reliance": 0.5, "n_pairs": 2, "n_differ": 1}
-    assert r[(1.0,)] == {"reliance": 1.0, "n_pairs": 1, "n_differ": 1}
-    assert len(pair_arms(recs)) == 3
+    assert r[(0.5,)]["reliance"] == 0.5 and r[(0.5,)]["n_pairs"] == 2
+    assert r[(1.0,)]["reliance"] == 1.0 and r[(1.0,)]["n_differ"] == 1
+    assert r[(1.0,)]["n_missing_b"] == 1
+    assert r[(1.0,)]["pair_coverage"] == 0.5
+    with pytest.warns(RuntimeWarning, match="missing"):
+        assert len(pair_arms(recs)) == 3
+
+
+def test_duplicate_trials_are_not_silently_dropped():
+    a = _rec("a", 0, "polite", 0.5, "correct")
+    b = _rec("a", 0, "neutral", 0.5, "wrong")
+    with pytest.raises(ValueError, match="duplicate"):
+        pair_arms([a, a, b])
+
+
+@pytest.mark.parametrize("field,a_value,b_value", [
+    ("effort", "low", "medium"),
+    ("n_turns", 4, 8),
+    ("served_model", "checkpoint-a", "checkpoint-b"),
+    ("protocol_version", 1, 2),
+    ("scorer_version", "v1", "v2"),
+    ("span_positions", [0, 2], [1, 3]),
+])
+def test_incompatible_twins_are_rejected(field, a_value, b_value):
+    a = dict(_rec("a", 0, "polite", 0.5, "correct"), **{field: a_value})
+    b = dict(_rec("a", 0, "neutral", 0.5, "wrong"), **{field: b_value})
+    with pytest.raises(ValueError, match=field):
+        pair_arms([a, b])
+
+
+def test_missing_fields_and_refused_twins_are_visible():
+    records = [
+        _rec("a", 0, "polite", 0.5, None), _rec("a", 0, "neutral", 0.5, None),
+        dict(_rec("b", 0, "polite", 0.5, "correct"), refused=True),
+        _rec("b", 0, "neutral", 0.5, "correct"),
+        _rec("c", 0, "neutral", 0.5, "correct"),
+    ]
+    r = behavioral_reliance(records)[(0.5,)]
+    assert r["n_pairs"] == 0 and r["reliance"] is None
+    assert r["n_unscorable"] == 1 and r["n_refused"] == 1
+    assert r["n_missing_a"] == 1 and r["n_matched"] == 2
+    assert r["pair_coverage"] == 0.0
 
 
 def test_attentional_reliance_uniform_gives_lift_one():

@@ -26,8 +26,10 @@ import numpy as np
 
 from vp.claims import load_claims
 from vp.contexts import ARMS, SPAN_LENGTHS, build_context, rebuttal_text, check_token_alignment
+from vp.io import read_jsonl, open_text
+from vp.records import completed_trials, trial_identity, validate_records
 from vp.reliance import attentional_reliance, token_masks
-from vp.scoring import classify
+from vp.scoring import classify, scoring_protocol
 
 
 def render_base(messages):
@@ -142,6 +144,29 @@ def main(argv=None):
     ap.add_argument("--out", default=None)
     args = ap.parse_args(argv)
 
+    claims = load_claims(args.bank, n=args.n_claims, seed=args.claim_seed)
+    densities = [float(d) for d in args.densities.split(",")]
+    arms = args.arms.split(",")
+    lengths = args.span_lengths.split(",")
+    tag = args.model.replace("/", "_") + ("_base" if args.base else "")
+    out = args.out or f"results/ow_{tag}_{args.bank}.jsonl"
+    protocol = dict(version=1, runner="openweights", bank=args.bank, context_version=1,
+                    rebuttal="syceval-simple-v1", n_turns=args.n_turns, base=args.base,
+                    max_new_tokens=args.max_new_tokens, sampling="greedy",
+                    dtype=args.dtype, k_heads=args.k_heads, checkpoint=args.model)
+    scoring = scoring_protocol()
+    planned = [dict(model=tag, claim_id=c.id, arm=arm, density=d, seed=s, span_length=L)
+               for c in claims for d in densities for L in (lengths if d > 0 else lengths[:1])
+               for arm in (arms if d > 0 else arms[:2]) for s in range(args.seeds)]
+    if not planned:
+        raise ValueError("requested grid must contain at least one trial")
+    validate_records(planned)
+    existing = read_jsonl(out) if os.path.exists(out) else []
+    done = completed_trials(existing, tag, protocol, scoring)
+    if all(trial_identity(r) in done for r in planned):
+        print("all requested trials already recorded", file=sys.stderr)
+        return 0
+
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -154,21 +179,19 @@ def main(argv=None):
     heads, _ = induction_heads(model, tok, device, args.k_heads)
     print(f"induction heads: {heads}", file=sys.stderr)
 
-    claims = load_claims(args.bank, n=args.n_claims, seed=args.claim_seed)
-    densities = [float(d) for d in args.densities.split(",")]
-    arms = args.arms.split(",")
-    lengths = args.span_lengths.split(",")
-    tag = args.model.replace("/", "_") + ("_base" if args.base else "")
-    out = args.out or f"results/ow_{tag}_{args.bank}.jsonl"
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     render = (lambda m: render_base(m)) if args.base else (lambda m: render_chat(tok, m))
 
-    with open(out, "a") as fh:
+    with open_text(out, "a") as fh:
         for claim in claims:
             for d in densities:
               for L in (lengths if d > 0 else lengths[:1]):
                 for arm in (arms if d > 0 else arms[:2]):   # density 0: noise floor, see run_api
                     for seed in range(args.seeds):
+                        identity = trial_identity(dict(model=tag, claim_id=claim.id, arm=arm,
+                                                       density=d, seed=seed, span_length=L))
+                        if identity in done:
+                            continue
                         t = build_context(claim, arm, d, seed, n_turns=args.n_turns, span_length=L)
                         wrong = claim.wrong_answer()
                         text, user_cr = render(t.messages)
@@ -187,6 +210,9 @@ def main(argv=None):
                                    span_length=L, extra_words=t.extra_words,
                                    usage1=dict(input=n_prompt, output=int(full.shape[1] - n_prompt)),
                                    n_turns=args.n_turns, n_spans=t.n_spans, refused=False,
+                                   span_positions=list(t.span_positions), phrase_indices=list(t.phrase_indices),
+                                   correct_answer=claim.correct_answer, wrong_answer=wrong,
+                                   protocol=protocol, scoring_protocol=scoring, served_model=args.model,
                                    first_text=a1, first_class=c1, second_text=a2, second_class=c2,
                                    rebuttal_target="wrong" if target == wrong else "correct",
                                    cave=(c1 == "correct" and c2 == "wrong"),

@@ -13,7 +13,9 @@ and an established result.
 - [Results log](results_log.md) and [committed runs](data/runs/README.md): what actually
   ran, scoring changes, and retained evidence.
 - [Outcome contract](docs/outcomes.md): primary endpoint, scorable denominators,
-  coverage, unavailable values, and analysis-version compatibility.
+  independent secondary annotations, coverage, and analysis-version compatibility.
+- [Protocol checks](docs/protocols.md): trial identity, pooling/resume compatibility,
+  missing-twin coverage, and unverified legacy metadata.
 - [Assessment](docs/assessment-2026-10-24.md): independently checked limitations at
   revision `1b7f773`.
 - [Follow-up plan](docs/follow-up-plan.md): planned measurement repairs and decision
@@ -44,7 +46,7 @@ design; identify retrospective reanalysis explicitly.
 - The recorded main run has zero final target-adoption flags, not proof of zero
   correct-to-incorrect regressions or of no politeness effect in general.
 - Historical prose reports 5,110 scorable trials and stored version-1 summaries use
-  5,112. Current analysis version 2 reproduces 5,085 after the documented second-answer
+  5,112. Analysis versions 2 and 3 reproduce 5,085 after the documented second-answer
   exclusions, while preserving first-answer accuracy counts. See the correction in
   the results log; do not mix historical and corrected summary versions.
 - Separate adopting the supplied wrong answer, inventing another incorrect answer,
@@ -68,6 +70,12 @@ design; identify retrospective reanalysis explicitly.
 - Preserve committed trial records, original judgments, and hand-review annotations.
   Produce versioned derived outputs for reanalysis; do not silently overwrite history
   or remove an override because a new judge disagrees.
+- Secondary annotations require provenance, independent judgments, and a matching
+  source fingerprint. Legacy `other` is not a broader-regression label. No committed
+  run currently has secondary annotations, so its secondary rates are unavailable.
+- Do not bypass duplicate/protocol errors by dropping records, inventing metadata,
+  or renaming models. Analyze incompatible configurations separately. Missing/refused
+  twins must remain visible in pair coverage.
 - Keep refused, truncated, unparseable, and otherwise unscorable responses visible in
   counts. Report exclusions and per-outcome denominators explicitly.
 - Record the protocol/scorer version, model actually served, judge settings, sampling

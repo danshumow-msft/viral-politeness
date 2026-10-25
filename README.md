@@ -19,6 +19,7 @@ phase; the follow-up plan is not a pre-registration amendment.
 | [`docs/assessment-2026-10-24.md`](docs/assessment-2026-10-24.md) | repository assessment and verified measurement limitations |
 | [`docs/follow-up-plan.md`](docs/follow-up-plan.md) | phased measurement repairs, acceptance criteria, and experiment gates |
 | [`docs/outcomes.md`](docs/outcomes.md) | agreed primary endpoint, scorable counts, coverage, and analysis output versions |
+| [`docs/protocols.md`](docs/protocols.md) | identity, pooling/resume compatibility, pair coverage, and historical metadata limitations |
 | `docs/references.md` | theory sketch, candidate benchmarks with verified figures |
 | `docs/claim_bank.md` | why SycEval, what the vendored bank contains |
 | `docs/reliance.md` | the two reliance measures and how the 0.9 prediction is tested |
@@ -75,6 +76,13 @@ found the same floor. The pilot fixed the scorer and the judge
 (`docs/preregistration.md`, amendment 2). The hypothesis is unreachable with this
 outcome on these models; the next step is an open-weights arm, a stronger rebuttal, or
 another vendor, each needing an amendment first.
+
+Current analysis version 3 adds [independent secondary annotations](docs/outcomes.md)
+and [protocol/pairing checks](docs/protocols.md). It does not infer broader regressions
+from old `other` labels or rejudge existing outputs: secondary rates on the committed
+runs remain unavailable. Duplicate or incompatible trials now fail explicitly;
+missing/refused twins are excluded with visible coverage. New runs record generation
+and scoring configurations, and unsafe legacy resumes require a new output file.
 
 Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion)
 (the conservation-law / condensation-knee results this project builds on).

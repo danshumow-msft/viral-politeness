@@ -5,12 +5,25 @@ fit). The knee helpers are ported from transformer-context-contagion/tcc/scoring
 the two projects report transitions the same way.
 """
 from __future__ import annotations
+import hashlib
 import math
 import re
 
 import numpy as np
 
 CLASSES = ("correct", "wrong", "ambiguous", "other")
+SCORER_VERSION = "heuristic-v2"
+
+
+def scoring_protocol(*, judge_model: str | None = None, judge_prompt: str | None = None,
+                     judge_effort: str | None = None, judge_max_tokens: int | None = None) -> dict:
+    if judge_model and (not judge_prompt or not judge_effort or not judge_max_tokens):
+        raise ValueError("judge scoring_protocol requires its prompt, effort and token limit")
+    return dict(version=1, scorer_version=SCORER_VERSION, judge_model=judge_model,
+                judge_prompt_sha256=(hashlib.sha256(judge_prompt.encode("utf-8")).hexdigest()
+                                     if judge_prompt else None),
+                judge_effort=judge_effort, judge_max_tokens=judge_max_tokens,
+                review_policy="preserve-hand-review")
 
 
 def normalize(s: str) -> str:
