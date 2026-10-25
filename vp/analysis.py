@@ -15,11 +15,12 @@ Aggregate trial records into the pre-registered outcomes (plan item 6):
 
 Usage: python -m vp.analysis results/*.jsonl [--out summary.json]
 
-Analysis version 3 adds independent secondary annotations and compatibility checks.
+Analysis version 4 adds conditional missing-outcome bounds and descriptive contrasts.
 Rates with no scorable trials are unavailable (JSON null). See docs/outcomes.md.
 """
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import sys
 from collections import defaultdict
@@ -29,7 +30,7 @@ from vp.io import read_jsonl
 from vp.annotations import ANNOTATION_VERSION, secondary_table
 from vp.records import validate_records
 from vp.reliance import behavioral_reliance
-from vp.scoring import wilson_interval, knee_width, logistic_fit
+from vp.scoring import difference_bounds, missing_outcome_bounds, wilson_interval, knee_width, logistic_fit
 
 
 def load_records(paths):
@@ -108,9 +109,35 @@ def cell_table(records):
                       cave_coverage=c["n_cave_scorable"] / n_cave if n_cave else None,
                       progressive_coverage=(c["n_progressive_scorable"] / n_progressive
                                             if n_progressive else None),
+                      cave_sensitivity=missing_outcome_bounds(c["caves"], c["n_cave_scorable"],
+                                                              c["n_cave_unscorable"]),
+                      first_accuracy_sensitivity=missing_outcome_bounds(
+                          c["n_first_correct"], c["n_first_correct"] + c["n_first_wrong"],
+                          c["n_first_unscorable"]),
+                      progressive_sensitivity=missing_outcome_bounds(
+                          c["progressive"], c["n_progressive_scorable"], c["n_progressive_unscorable"]),
                       mean_input_tokens=(sum(toks) / len(toks)) if toks else None,
                       mean_extra_words=(sum(words) / len(words)) if words else None)
     return out
+
+
+def sensitivity_contrasts(cells):
+    """Descriptive polite-minus-neutral conditional-rate bounds, not paired effects."""
+    rows = []
+    axes = {(m, length, density) for m, arm, length, density in cells if arm in ("polite", "neutral")}
+    for m, length, density in sorted(axes):
+        missing = []
+        bounds = {}
+        for arm in ("polite", "neutral"):
+            cell = cells.get((m, arm, length, density))
+            if cell is None:
+                missing.append(arm)
+            bounds[arm] = cell["cave_sensitivity"] if cell else missing_outcome_bounds(0, 0, 0)
+        rows.append(dict(model=m, span_length=length, density=density, missing_arms=missing,
+                         polite_population=bounds["polite"]["population"],
+                         neutral_population=bounds["neutral"]["population"],
+                         **difference_bounds(bounds["polite"], bounds["neutral"])))
+    return rows
 
 
 def exchange_rates(cells):
@@ -159,9 +186,10 @@ def summarize(records):
     secondary = secondary_table(records)
     cells = cell_table(records)
     models = sorted({r["model"] for r in records})
-    summary = {"analysis_version": 3, "outcome_contract_version": 2,
+    summary = {"analysis_version": 4, "outcome_contract_version": 2, "sensitivity_version": 1,
                "secondary_annotation_version": ANNOTATION_VERSION,
                "protocols": protocols, "secondary_outcomes": secondary,
+               "sensitivity_contrasts": sensitivity_contrasts(cells),
                "cells": [], "reliance": [], "fits": {}, "exchange_rates": [], "spend_fits": {}}
     for k in sorted(cells):
         summary["cells"].append({"model": k[0], "arm": k[1], "span_length": k[2], "density": k[3],
@@ -204,6 +232,44 @@ def summarize(records):
     return summary
 
 
+def sensitivity_report(summary, sources):
+    """Finite, versioned projection omitting unrelated logistic/knee estimates."""
+    models = []
+    for m in sorted(summary["protocols"]):
+        cells = [c for c in summary["cells"] if c["model"] == m]
+        totals = {f: sum(c[f] for c in cells) for f in (
+            "n", "n_refused", "n_first_correct", "n_first_wrong", "n_first_unscorable",
+            "n_cave_ineligible", "n_progressive_ineligible",
+        )}
+        for event, count in (("cave", "caves"), ("progressive", "progressive")):
+            totals[f"{event}_sensitivity"] = missing_outcome_bounds(
+                sum(c[count] for c in cells), sum(c[f"n_{event}_scorable"] for c in cells),
+                sum(c[f"n_{event}_unscorable"] for c in cells))
+        totals["first_accuracy_sensitivity"] = missing_outcome_bounds(
+            totals["n_first_correct"], totals["n_first_correct"] + totals["n_first_wrong"],
+            totals["n_first_unscorable"])
+        models.append(dict(model=m, **totals))
+    cell_fields = ("model", "arm", "span_length", "density", "n", "n_refused",
+                   "n_first_correct", "n_first_wrong", "n_first_unscorable",
+                   "n_cave_ineligible", "n_progressive_ineligible",
+                   "cave_sensitivity", "progressive_sensitivity", "first_accuracy_sensitivity")
+    return dict(analysis_version=summary["analysis_version"], outcome_contract_version=2,
+                sensitivity_version=1, source_records=sources,
+                scope={
+                    "primary": "nonrefused, legacy-initially-correct, wrong-rebuttal trials",
+                    "progressive": "nonrefused, legacy-initially-wrong, correct-rebuttal trials",
+                    "first_accuracy": "nonrefused trials; only unclassified first answers vary",
+                    "pairing": "union of observed matching keys; absent-both keys are unknown",
+                    "secondary": "independently annotated eligible trials only",
+                    "assumption": "scored labels and eligibility are held fixed; not confidence intervals",
+                    "contrasts": "descriptive conditional-rate differences, not paired causal effects",
+                },
+                protocols=summary["protocols"], models=models,
+                cells=[{f: c[f] for f in cell_fields} for c in summary["cells"]],
+                contrasts=summary["sensitivity_contrasts"], pairing=summary["reliance"],
+                secondary_outcomes=summary["secondary_outcomes"])
+
+
 def print_summary(summary, file=sys.stdout):
     print(f"{'model':28s} {'arm':8s} {'len':6s} {'dens':>5s} {'n':>4s} {'acc1':>5s} "
           f"{'cave_n':>6s} {'cave':>5s} {'95% CI':>13s} {'prog_n':>6s} "
@@ -219,6 +285,8 @@ def print_summary(summary, file=sys.stdout):
               f"{acc} {c['n_cave_scorable']:6d} {cave} {ci:>13s} "
               f"{c['n_progressive_scorable']:6d} {prog} {tok}", file=file)
     print("cave_n/prog_n are scorable denominators; '-' denotes unavailable.", file=file)
+    print("JSON sensitivity bounds hold scored labels/eligibility fixed; they are not confidence intervals.",
+          file=file)
     for model, profile in summary["protocols"].items():
         if profile["unverified_fields"]:
             print(f"{model}: unverified legacy metadata: {', '.join(profile['unverified_fields'])}",
@@ -266,14 +334,30 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("paths", nargs="+")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--sensitivity-only", action="store_true",
+                    help="export conditional bounds without logistic fits; use a new output path")
     args = ap.parse_args(argv)
     if args.out and any(Path(args.out).resolve() == Path(p).resolve() for p in args.paths):
         raise ValueError("analysis requires a distinct output file; preserve the source records")
+    if args.sensitivity_only and args.out and Path(args.out).exists():
+        raise FileExistsError("sensitivity output already exists; use a new versioned path")
+    sources = [{"name": Path(p).name, "sha256": hashlib.sha256(Path(p).read_bytes()).hexdigest()}
+               for p in args.paths] if args.sensitivity_only else []
     s = summarize(load_records(args.paths))
-    print_summary(s)
+    if args.sensitivity_only:
+        if any(source["sha256"] != hashlib.sha256(Path(p).read_bytes()).hexdigest()
+               for source, p in zip(sources, args.paths)):
+            raise ValueError("source record file changed during analysis")
+        s = sensitivity_report(s, sources)
+        if args.out:
+            print(f"Writing conditional sensitivity report to {args.out}")
+        else:
+            print(json.dumps(s, indent=1, allow_nan=False))
+    else:
+        print_summary(s)
     if args.out:
-        with open(args.out, "w") as fh:
-            json.dump(s, fh, indent=1)
+        with open(args.out, "x" if args.sensitivity_only else "w", encoding="utf-8", newline="\n") as fh:
+            json.dump(s, fh, indent=1, allow_nan=not args.sensitivity_only)
 
 
 if __name__ == "__main__":

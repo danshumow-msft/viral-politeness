@@ -16,6 +16,10 @@ and an established result.
   independent secondary annotations, coverage, and analysis-version compatibility.
 - [Protocol checks](docs/protocols.md): trial identity, pooling/resume compatibility,
   missing-twin coverage, and unverified legacy metadata.
+- [Sensitivity bounds](docs/sensitivity.md): declared populations, unknown-outcome
+  extremes, and the distinction between identification bounds and confidence intervals.
+- [Scorer audit](docs/scorer-audit.md): approved retrospective sampling/review design;
+  preparation is not completed independent validation.
 - [Assessment](docs/assessment-2026-10-24.md): independently checked limitations at
   revision `1b7f773`.
 - [Follow-up plan](docs/follow-up-plan.md): planned measurement repairs and decision
@@ -40,13 +44,15 @@ design; identify retrospective reanalysis explicitly.
 - [Rescoring](experiments/rescore.py) reads existing outputs without rerunning the
   tested model; it can still make paid judge calls unless the judge is disabled.
 - [Tests](tests) are offline; [CI](.github/workflows/tests.yml) runs pytest.
+- [Audit preparation](vp/audit.py) is offline and writes ungraded reviewer material
+  plus a separate coordinator mapping. It does not conduct reviews or label records.
 
 ## Research constraints
 
 - The recorded main run has zero final target-adoption flags, not proof of zero
   correct-to-incorrect regressions or of no politeness effect in general.
 - Historical prose reports 5,110 scorable trials and stored version-1 summaries use
-  5,112. Analysis versions 2 and 3 reproduce 5,085 after the documented second-answer
+  5,112. Analysis versions 2 through 4 reproduce 5,085 after the documented second-answer
   exclusions, while preserving first-answer accuracy counts. See the correction in
   the results log; do not mix historical and corrected summary versions.
 - Separate adopting the supplied wrong answer, inventing another incorrect answer,
@@ -59,6 +65,9 @@ design; identify retrospective reanalysis explicitly.
 - A floor effect can make a threshold untestable; it does not establish the mechanism.
   Attention correlations and base-versus-instruct differences alone are not causal
   evidence for induction heads or trained social compliance.
+- Missing-outcome bounds hold scored labels and eligibility fixed. They do not cover
+  scorer mistakes or all excluded trials. A conditional bound is not a whole-run
+  confidence limit or a causal treatment-effect interval.
 - Phrase sets are currently word-matched, not guaranteed token-matched. Do not claim
   fixed token cost without checking the actual tokenizer or billed usage.
 - Treat findings from the
@@ -76,6 +85,13 @@ design; identify retrospective reanalysis explicitly.
 - Do not bypass duplicate/protocol errors by dropping records, inventing metadata,
   or renaming models. Analyze incompatible configurations separately. Missing/refused
   twins must remain visible in pair coverage.
+- Keep audit packets and coordinator mappings under ignored results. Share only the
+  reviewer subdirectory; never commit the private mapping or expose old judgments
+  to initial reviewers. Preserve both initial reviews and all adjudication evidence.
+- The approved audit uses 400 sampled accepted negatives plus exception censuses,
+  two independent reviewers, and a 95% one-sided upper bound below 1% miss fraction.
+  Treat unresolved reviews conservatively. Packet preparation or a hypothetical gate
+  calculation does not establish a passed audit or a traditional false-negative rate.
 - Keep refused, truncated, unparseable, and otherwise unscorable responses visible in
   counts. Report exclusions and per-outcome denominators explicitly.
 - Record the protocol/scorer version, model actually served, judge settings, sampling

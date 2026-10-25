@@ -3,8 +3,9 @@
 Date: 2026-10-24.
 
 Status: in progress. The initial M1/M2 aggregation slice, independent secondary
-annotation contract, and pairing/protocol guards are implemented. The full package
-gates and later experiments remain open.
+annotation contract, pairing/protocol guards, conditional sensitivity bounds, and
+blinded-audit preparation are implemented. Independent validation and later
+experiment gates remain open.
 
 This plan turns the [assessment](assessment-2026-10-24.md) of revision
 [`1b7f773`](https://github.com/shumow/viral-politeness/tree/1b7f7734987c32281c34423407c6ca8f87d4e7b4)
@@ -53,7 +54,7 @@ without changing stored annotations; token matching and scoring validity remain 
 
 ## Work packages and dependencies
 
-M1 and M2 are **in progress**; M3-M8 remain **planned**. Dependencies are explicit;
+M1-M3 are **in progress**; M4-M8 remain **planned**. Dependencies are explicit;
 independent offline packages may proceed in parallel after their common prerequisite.
 
 | ID | Work package | Depends on | Completion gate |
@@ -112,6 +113,31 @@ annotations and blinded scorer validation still require M3. M2 still needs
 sensitivity analysis and publication of versioned reanalysis artifacts. Full
 expected-run manifests, immutable checkpoint/context provenance, and token matching
 remain M4 work; the incremental configuration metadata is not a replacement.
+
+### Progress: sensitivity exports and blinded-audit design, 2026-10-25
+
+- Analysis version 4 implements [conditional bounds](sensitivity.md) for primary and
+  progressive outcomes, first-answer accuracy, observed pair keys, independently
+  annotated secondary metrics, and descriptive polite-minus-neutral contrasts.
+- Scoped strict-JSON sensitivity reports are versioned separately for all six
+  [committed runs](../data/runs/README.md), with source hashes and unchanged
+  historical records/summaries. Unknown eligibility and scorer mistakes are not
+  silently imputed by the bounds.
+- The owner approved the [retrospective audit design](scorer-audit.md): a random
+  sample of 400 accepted negatives plus exception censuses, two independent human
+  reviewers, and a 95% one-sided upper bound below 1% for accepted-negative misses.
+- The offline preparer separates reviewer material from private coordinator
+  mappings and writes blank review templates only. Source labels and hand reviews
+  are never exposed as grading metadata or changed by preparation.
+- Exact finite-population gate arithmetic is tested against enumerated small
+  populations, including discrete equality boundaries. A partial review remains
+  pending, and unresolved reviews count conservatively.
+
+This completes the planned implementation of conditional sensitivity and scoped
+reanalysis publication, not independent measurement validation. M3 still requires
+real independent reviews, disagreement adjudication, and a locked report; those
+are not replaced by synthetic tests or packet preparation. Full eligibility/scorer
+uncertainty and later model-level causal inference require their separate gates.
 
 ### M1. Define outcomes before changing the scorer
 
@@ -321,15 +347,17 @@ it as inconclusive and update the [mechanism note](mechanism.md) accordingly.
 
 The first two **M1/M2** slices now separate scorable denominators from first-answer
 accuracy, specify independent secondary annotations, and enforce recorded pairing/
-protocol compatibility. Next, design the blinded scorer audit and complete
-coverage/sensitivity analysis before treating the measurement pipeline as validated.
-Scorer validity must not be inferred from corrected arithmetic or serialization.
+protocol compatibility. Conditional sensitivity and a frozen blinded-audit design
+are now implemented. Next, obtain independent reviews and adjudication before
+treating the measurement pipeline as validated. Scorer validity must not be inferred
+from corrected arithmetic, serialization, or a hypothetical audit gate calculation.
 
 Before advancing to live work, the owner must approve:
 
 - any change to the approved primary endpoint, and detailed rules for the separate
   broader-regression/uncertainty annotations;
-- scorer-audit sample sizes and acceptable error bounds;
+- any revision to the approved scorer-audit sample size/error bound, and any paid
+  review or new positive-control evaluation;
 - token-matching policy and any unavailable-tokenizer limitation;
 - a validated reliance measure or explicit deferral of the threshold hypothesis;
 - numerical calibration gates, claim splits, model choices, and budget/stopping caps.

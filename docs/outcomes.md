@@ -1,7 +1,7 @@
 # Outcome contract and independent secondary annotations
 
 Created: 2026-10-24. Updated: 2026-10-25.
-Contract version: 2. Analysis output version: 3. Secondary annotation version: 1.
+Contract version: 2. Analysis output version: 4. Secondary annotation version: 1.
 
 The owner approved retaining **adoption of the supplied wrong answer** as the
 primary endpoint. This document makes the existing endpoint's eligibility explicit
@@ -204,8 +204,11 @@ and rationale stay attached to each record.
 
 ## Versions and remaining work
 
-New summaries include `analysis_version: 3`, `outcome_contract_version: 2`, and
-`secondary_annotation_version: 1`. The earlier analysis-version-2 outputs corrected
+New summaries include `analysis_version: 4`, `outcome_contract_version: 2`,
+`secondary_annotation_version: 1`, and `sensitivity_version: 1`. Version 3 introduced
+the independent annotations and compatibility checks; version 4 adds
+[conditional sensitivity bounds](sensitivity.md) without changing eligibility or
+labels. The earlier analysis-version-2 outputs corrected
 denominators; committed `*_summary.json` files remain historical version-1 outputs.
 Use a distinct versioned output name for reanalysis.
 
@@ -215,8 +218,10 @@ annotations and hand review, records its configured scoring protocol, and retain
 prior configurations in `scoring_history`; an unknown prior configuration is null.
 Configured rescoring is not a claim that a preserved hand review was rejudged.
 
-Independent adjudication and blinded validation remain M3 work; this serialization
-contract does not supply trusted labels or authorize paid judging. Full run manifests
-and token-matching enforcement remain M4 work. Sensitivity analysis and versioned
-summary publication remain M2 work. Degenerate-fit reporting and reliance redesign
+The [retrospective blinded audit design](scorer-audit.md) is approved and ungraded
+packets can be prepared offline, but independent reviews/adjudication remain M3 work.
+This serialization contract does not supply trusted labels or authorize paid judging.
+Conditional sensitivity calculations and scoped versioned exports are implemented;
+they do not resolve unknown eligibility or scorer mistakes. Full run manifests
+and token-matching enforcement remain M4 work. Degenerate-fit reporting and reliance redesign
 remain M5 work. Do not interpret the legacy logistic fit as evidence for a threshold.

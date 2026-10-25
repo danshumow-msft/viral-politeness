@@ -27,7 +27,7 @@ import warnings
 import numpy as np
 
 from vp.records import PAIR_FIELDS, trial_identity, validate_records
-from vp.scoring import CLASSES
+from vp.scoring import CLASSES, missing_outcome_bounds
 
 
 # ----------------------------------------------------------------------------- behavioral
@@ -101,7 +101,10 @@ def behavioral_reliance(records: Iterable[dict], field: str = "first_class",
         c["n_differ"] += int(values[0] != values[1])
     for c in cells.values():
         c["reliance"] = c["n_differ"] / c["n_pairs"] if c["n_pairs"] else None
-        c["pair_coverage"] = c["n_pairs"] / (c["n_matched"] + c["n_missing_a"] + c["n_missing_b"])
+        observed_keys = c["n_matched"] + c["n_missing_a"] + c["n_missing_b"]
+        c["pair_coverage"] = c["n_pairs"] / observed_keys
+        c["sensitivity"] = missing_outcome_bounds(c["n_differ"], c["n_pairs"],
+                                                 observed_keys - c["n_pairs"])
     return dict(cells)
 
 

@@ -20,6 +20,8 @@ phase; the follow-up plan is not a pre-registration amendment.
 | [`docs/follow-up-plan.md`](docs/follow-up-plan.md) | phased measurement repairs, acceptance criteria, and experiment gates |
 | [`docs/outcomes.md`](docs/outcomes.md) | agreed primary endpoint, scorable counts, coverage, and analysis output versions |
 | [`docs/protocols.md`](docs/protocols.md) | identity, pooling/resume compatibility, pair coverage, and historical metadata limitations |
+| [`docs/sensitivity.md`](docs/sensitivity.md) | conditional missing-outcome bounds and versioned strict-JSON exports |
+| [`docs/scorer-audit.md`](docs/scorer-audit.md) | retrospective blinded audit design; independent reviews are still pending |
 | `docs/references.md` | theory sketch, candidate benchmarks with verified figures |
 | `docs/claim_bank.md` | why SycEval, what the vendored bank contains |
 | `docs/reliance.md` | the two reliance measures and how the 0.9 prediction is tested |
@@ -30,6 +32,7 @@ phase; the follow-up plan is not a pre-registration amendment.
 | `experiments/run_api.py` | density sweep on chat models over the Claude API |
 | `experiments/run_openweights.py` | same protocol on Hugging Face models, with attention |
 | `experiments/rescore.py` | re-classify an existing results file with the current scorer and judge |
+| [`vp/audit.py`](vp/audit.py) | offline preparation of ungraded reviewer packets and private coordinator mappings |
 | `results_log.md` | every live run, what it found, what changed because of it |
 | `data/runs/` | committed run summaries and gzip-compressed per-trial records |
 | `tests/` | offline unit tests |
@@ -77,12 +80,19 @@ found the same floor. The pilot fixed the scorer and the judge
 outcome on these models; the next step is an open-weights arm, a stronger rebuttal, or
 another vendor, each needing an amendment first.
 
-Current analysis version 3 adds [independent secondary annotations](docs/outcomes.md)
+Analysis version 3 added [independent secondary annotations](docs/outcomes.md)
 and [protocol/pairing checks](docs/protocols.md). It does not infer broader regressions
 from old `other` labels or rejudge existing outputs: secondary rates on the committed
 runs remain unavailable. Duplicate or incompatible trials now fail explicitly;
 missing/refused twins are excluded with visible coverage. New runs record generation
 and scoring configurations, and unsafe legacy resumes require a new output file.
+
+Current version 4 adds [conditional sensitivity bounds](docs/sensitivity.md).
+For example, assigning all 27 unclassified second answers to adoption gives an
+upper endpoint of `27/5112` (0.528%) **conditional on the existing eligibility and
+scored labels**, not a whole-run confidence limit. The
+[blinded scorer-audit design](docs/scorer-audit.md) and packet preparer are available;
+no independent reviews have been completed and no scorer-validity gate has passed.
 
 Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion)
 (the conservation-law / condensation-knee results this project builds on).

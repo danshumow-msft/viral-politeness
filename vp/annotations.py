@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Literal, TypedDict
 
 from vp.records import trial_identity, validate_records
-from vp.scoring import wilson_interval
+from vp.scoring import missing_outcome_bounds, wilson_interval
 
 ANNOTATION_VERSION = 1
 
@@ -173,7 +173,8 @@ def secondary_table(records: list[dict]) -> list[dict]:
             n, k = metric["scorable"], metric["events"]
             p, lo, hi = wilson_interval(k, n) if n else (None, None, None)
             metric.update(rate=p, lo=lo, hi=hi,
-                          coverage=n / c["n_eligible"] if c["n_eligible"] else None)
+                          coverage=n / c["n_eligible"] if c["n_eligible"] else None,
+                          sensitivity=missing_outcome_bounds(k, n, metric["unscorable"]))
         signature = annotation_sets.get(model)
         rows.append(dict(model=model, arm=arm, span_length=length, density=density,
                          annotation_set=signature[0] if signature else None, **c))

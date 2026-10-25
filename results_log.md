@@ -305,3 +305,63 @@ failures before clients/weights, scoring-history preservation, the CLI, and the 
 original datasets. No model or judge calls, weight downloads, or source reannotations
 were performed. Blinded scorer validation, sensitivity analysis, full run manifests,
 token matching, and reliance/fit-identifiability work remain open.
+
+## 2026-10-25 - Conditional sensitivity and blinded-audit preparation (no reviews)
+
+This is an offline analysis/design slice. Analysis version 4 adds conditional
+missing-outcome identification bounds and descriptive arm contrasts while retaining
+outcome contract version 2 and every stored class, event flag, and hand review.
+See [sensitivity scope](docs/sensitivity.md) and the
+[retrospective audit design](docs/scorer-audit.md).
+
+The owner approved 400 randomly sampled accepted negatives plus exception censuses,
+two independent human reviewers, and a 95% one-sided upper confidence bound below
+1% for the accepted-negative miss fraction. This is not a traditional false-negative
+rate among true positives. No independent reviews or adjudications have occurred,
+and no audit-validity gate has passed.
+
+All six [versioned sensitivity exports](data/runs/README.md) were generated from the
+committed record files without new model/judge calls. Their source hashes and
+historical summary hashes were preserved; strict-JSON validation and independent
+source counting reproduced:
+
+| Run | Scorable adoption trials | Unknown second answers within the eligible population | Conditional population | Adoption identification range |
+|---|---:|---:|---:|---|
+| Main Opus computational | 5,085 | 27 | 5,112 | [0, 27/5112] |
+| Pilot Opus computational | 260 | 0 | 260 | [0, 0] |
+| Pilot Opus medical | 258 | 0 | 258 | [0, 0] |
+| Pilot Sonnet computational | 259 | 1 | 260 | [0, 1/260] |
+| Pilot Haiku computational | 247 | 8 | 255 | [0, 8/255] |
+| Pilot Haiku low-effort computational | 254 | 4 | 258 | [0, 4/258] |
+
+All ranges hold the existing scorable labels and eligibility fixed. The main upper
+endpoint is about 0.528%, **not a whole-run confidence limit**: 86 unclassified first
+answers and 2 refusals are outside this conditional adoption population. A separate
+first-answer missingness range is [5112/5198, 1]. Paired disagreement at density 0.9
+ranges from 1/200 to 3/200 over observed keys after allowing either outcome for the
+two refused pairs. None of these calculations validates causal reliance or assumes
+the accepted labels are infallible.
+
+The approved local packet contains 518 ungraded cases: 400 of 5,082 ordinary accepted
+negatives, 113 unscorable cases, 3 prior hand reviews, and 2 refusals. Reviewer files
+use a tested metadata allowlist and blank templates; old decisions, identities,
+sampling probabilities, and the independent blinding seed are in a separate private
+coordinator mapping under ignored results, not committed. Source, frame, record,
+case, exported-file, and preparation-code bindings were checked without exposing
+the mappings to reviewers.
+
+The audit's finite-population confidence helper is tested against small exact
+enumerations, including a discrete-tail equality case that required rational rather
+than floating-point tail comparison. Unresolved cases count conservatively, and
+incomplete review of the fixed planned sample cannot pass.
+
+All committed runs remain without secondary annotations; those rates/bounds are
+unavailable. Actual independent review, adjudication, and a locked validation report
+remain M3 work. Positive-class sensitivity cannot be certified from a frame with no
+final positives. Full run manifests, tokenizer matching, and model-level inference
+remain separate follow-up work.
+
+**Validation:** the configured full offline suite passed 186 tests with no warnings.
+All nine changed/new Python files passed Python 3.12 syntax parsing. The six reports
+were independently checked against raw counts and source hashes, and all 518 packet
+cases passed field-allowlist, blank-template, probability, and integrity checks.

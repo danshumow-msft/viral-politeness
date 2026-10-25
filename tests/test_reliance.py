@@ -59,6 +59,8 @@ def test_missing_fields_and_refused_twins_are_visible():
     assert r["n_unscorable"] == 1 and r["n_refused"] == 1
     assert r["n_missing_a"] == 1 and r["n_matched"] == 2
     assert r["pair_coverage"] == 0.0
+    assert r["sensitivity"] == dict(events=0, scorable=0, unknown=3, population=3,
+                                   lower=0.0, upper=1.0)
 
 
 def test_attentional_reliance_uniform_gives_lift_one():

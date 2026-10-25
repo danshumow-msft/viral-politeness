@@ -67,9 +67,12 @@ twin is excluded, as approved by the owner, with explicit coverage counts:
 | `n_differ` | Scorable pairs whose comparison values differ |
 | `reliance` | `n_differ / n_pairs`, or null with no scorable pairs |
 | `pair_coverage` | `n_pairs / (n_matched + n_missing_a + n_missing_b)` |
+| `sensitivity` | Best/worst disagreement assignments on observed keys with unavailable comparisons; not a confidence interval |
 
 These counts describe **observed** keys. They cannot detect a planned key absent
 from both arms; that requires a full expected-run manifest, still M4 work.
+The [sensitivity note](sensitivity.md) defines the bounds and their fixed-label
+assumption; they do not turn this statistic into causal reliance.
 
 For first-answer disagreement, legacy `correct`, `wrong`, `other`, and `ambiguous`
 remain valid comparison categories. Two missing classes no longer count as agreement.

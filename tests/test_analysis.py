@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from vp.analysis import cell_table, exchange_rates, print_summary, summarize, load_records
+from vp.analysis import cell_table, exchange_rates, main as analysis_main, print_summary, summarize, load_records
 from vp.scoring import wilson_interval
 from experiments.run_api import main as api_main
 
@@ -54,6 +54,35 @@ def test_missing_second_answer_is_not_a_scorable_hold():
     assert c["n_cave_scorable"] == 0 and c["n_cave_unscorable"] == 1
     assert c["cave_rate"] is c["cave_lo"] is c["cave_hi"] is None
     assert c["cave_coverage"] == 0.0
+
+
+def test_missing_outcome_bounds_do_not_relabel_excluded_trials():
+    records = [
+        _trial(second="wrong"),
+        _trial(second="other", claim_id="d"),
+        _trial("other", "other", claim_id="e"),
+        _trial(refused=True, claim_id="f"),
+    ]
+    c = next(iter(cell_table(records).values()))
+    assert c["cave_rate"] == 1.0
+    assert c["cave_sensitivity"] == dict(events=1, scorable=1, unknown=1, population=2,
+                                       lower=0.5, upper=1.0)
+    assert c["n_first_unscorable"] == c["n_refused"] == 1
+    assert records[1]["second_class"] == "other"
+    assert c["first_accuracy_sensitivity"]["lower"] == 2 / 3
+    assert c["first_accuracy_sensitivity"]["upper"] == 1.0
+
+
+def test_descriptive_contrasts_use_extreme_assignments_and_report_missing_arms():
+    records = [
+        _trial(second="wrong"), _trial(second="other", claim_id="d"),
+        _trial(arm="neutral"), _trial(arm="neutral", claim_id="d"),
+    ]
+    s = summarize(records)
+    c = s["sensitivity_contrasts"][0]
+    assert c["lower"] == 0.5 and c["upper"] == 1.0 and c["missing_arms"] == []
+    missing = summarize([_trial()])["sensitivity_contrasts"][0]
+    assert missing["missing_arms"] == ["neutral"] and missing["lower"] is None
 
 
 def test_endpoint_eligibility_uses_the_actual_rebuttal():
@@ -106,7 +135,7 @@ def test_invalid_rebuttal_target_is_reported():
 ])
 def test_unavailable_rates_are_null_and_printable(records, accuracy):
     s = summarize(records)
-    assert s["analysis_version"] == 3
+    assert s["analysis_version"] == 4
     assert s["outcome_contract_version"] == 2
     for c in s["cells"]:
         assert c["first_accuracy"] == accuracy
@@ -181,11 +210,11 @@ def test_analysis_cli_writes_versioned_counts_without_changing_records(tmp_path)
     root = Path(__file__).resolve().parents[1]
     path = root / "data" / "runs" / "main_opus55_computational.jsonl.gz"
     original = path.read_bytes()
-    out = tmp_path / "summary_v3.json"
+    out = tmp_path / "summary_v4.json"
     completed = subprocess.run([sys.executable, "-m", "vp.analysis", str(path), "--out", str(out)],
                                cwd=root, check=True, capture_output=True, text=True)
     s = json.loads(out.read_text())
-    assert s["analysis_version"] == 3 and s["outcome_contract_version"] == 2
+    assert s["analysis_version"] == 4 and s["outcome_contract_version"] == 2
     assert sum(c["n_cave_scorable"] for c in s["cells"]) == 5085
     assert sum(c["n_cave_unscorable"] for c in s["cells"]) == 27
     assert all(c["progressive_rate"] is None for c in s["cells"])
@@ -220,6 +249,24 @@ def test_cli_cannot_overwrite_its_source_records(tmp_path):
     completed = subprocess.run([sys.executable, "-m", "vp.analysis", str(path), "--out", str(path)],
                                cwd=root, capture_output=True, text=True)
     assert completed.returncode != 0 and "preserve the source" in completed.stderr
+    assert path.read_bytes() == original
+
+
+def test_sensitivity_export_is_strict_json_and_does_not_overwrite(tmp_path, capsys):
+    path, out = tmp_path / "r.jsonl", tmp_path / "sensitivity_v1.json"
+    records = [_trial(density=d) for d in (0.0, 0.5, 1.0)]
+    path.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
+    original = path.read_bytes()
+    analysis_main([str(path), "--out", str(out), "--sensitivity-only"])
+    result = json.loads(out.read_text(encoding="utf-8"))
+    assert result["analysis_version"] == 4 and result["sensitivity_version"] == 1
+    assert "fits" not in result and "spend_fits" not in result
+    assert result["models"][0]["cave_sensitivity"]["population"] == 3
+    assert all(r["broader_regression"]["sensitivity"]["population"] == 0
+               for r in result["secondary_outcomes"])
+    json.dumps(result, allow_nan=False)
+    with pytest.raises(FileExistsError):
+        analysis_main([str(path), "--out", str(out), "--sensitivity-only"])
     assert path.read_bytes() == original
 
 
