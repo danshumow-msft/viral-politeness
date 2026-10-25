@@ -5,13 +5,19 @@ Hypothesis: polite phrases ("please", "thank you") are benign context contagions
 influence on a model's answers tracks *reliance* rather than usefulness, with a
 condensation threshold near 0.9 reliance. The measurable outcome is regressive
 sycophancy (caving to a wrong-answer rebuttal) as a function of politeness density.
-See [`PLAN.md`](PLAN.md) for the plan of record and status.
+See [`PLAN.md`](PLAN.md) for the original plan of record and status. The
+[2026-10-24 assessment](docs/assessment-2026-10-24.md) and
+[measurement-first follow-up plan](docs/follow-up-plan.md) describe the proposed next
+phase; the follow-up plan is not a pre-registration amendment.
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `PLAN.md` | plan of record, item status |
+| [`AGENTS.md`](AGENTS.md) | repository guidance for research and development agents |
+| `PLAN.md` | original plan of record, item status |
+| [`docs/assessment-2026-10-24.md`](docs/assessment-2026-10-24.md) | repository assessment and verified measurement limitations |
+| [`docs/follow-up-plan.md`](docs/follow-up-plan.md) | phased measurement repairs, acceptance criteria, and experiment gates |
 | `docs/references.md` | theory sketch, candidate benchmarks with verified figures |
 | `docs/claim_bank.md` | why SycEval, what the vendored bank contains |
 | `docs/reliance.md` | the two reliance measures and how the 0.9 prediction is tested |
