@@ -2,7 +2,8 @@
 
 Date: 2026-10-24.
 
-Status: planned; no work package below is implemented by adding this document.
+Status: in progress. The initial M1/M2 aggregation slice is implemented; the full
+package gates and later experiments remain open.
 
 This plan turns the [assessment](assessment-2026-10-24.md) of revision
 [`1b7f773`](https://github.com/shumow/viral-politeness/tree/1b7f7734987c32281c34423407c6ca8f87d4e7b4)
@@ -46,12 +47,13 @@ The 5,085 count applies the documented exclusions to the current annotations; it
 not a new, independently adjudicated correctness result. Five completing-the-square
 responses illustrate real correct-to-new-incorrect regressions hidden inside `other`.
 At density 1, polite and neutral prompts also differ in mean billed input tokens:
-338.1 versus 321.1. These are starting facts to reconcile, not completed repairs.
+338.1 versus 321.1. Analysis version 2 now reproduces the 5,085 scorable count
+without changing stored annotations; token matching and scoring validity remain open.
 
 ## Work packages and dependencies
 
-All packages start as **planned**. Dependencies are explicit; independent offline
-packages may proceed in parallel after their common prerequisite.
+M1 and M2 are **in progress**; M3-M8 remain **planned**. Dependencies are explicit;
+independent offline packages may proceed in parallel after their common prerequisite.
 
 | ID | Work package | Depends on | Completion gate |
 |---|---|---|---|
@@ -63,6 +65,25 @@ packages may proceed in parallel after their common prerequisite.
 | M6 | Calibration pilot | M2, M3, M4, M5; approved protocol and budget | Nonzero, nonsaturated regime or a documented stop |
 | M7 | Confirmatory behavioral study | M6; frozen analysis and approved budget | Paired effect estimates with uncertainty |
 | M8 | Causal mechanism study | Reproducible positive behavior from M7 | Intervention evidence or an explicit inconclusive result |
+
+### Progress: initial offline slice, 2026-10-24
+
+- The owner approved preserving supplied-wrong-answer adoption as primary, with
+  broader regression and uncertainty kept separate. The initial
+  [outcome contract](outcomes.md) documents eligibility and the legacy record mapping.
+- Analysis version 2 separates scorable outcome counts from first-answer accuracy,
+  exposes excluded/ineligible counts and coverage, and uses those denominators for
+  rates, Wilson intervals, exchange-rate baselines, and logistic weights.
+- Empty outcome denominators are unavailable, not zero. Missing or inconsistent
+  event flags on otherwise scorable trials raise an error rather than silently
+  becoming holds.
+- Offline regressions cover all six committed runs and the main-run CLI. Original
+  records, hand reviews, stored summaries, and the pre-registration are untouched.
+  The [results log](../results_log.md) has the retrospective count reconciliation.
+
+This does **not** complete M1/M2: independent secondary-outcome annotations,
+serialization for those annotations, pairing/protocol validation, and further
+coverage/sensitivity analysis remain. No new data collection is authorized.
 
 ### M1. Define outcomes before changing the scorer
 
@@ -270,14 +291,15 @@ it as inconclusive and update the [mechanism note](mechanism.md) accordingly.
 
 ## First implementation slice and decision gates
 
-The recommended first code change is **M1 plus a narrow M2 regression**: agree on
-endpoint/eligibility definitions, add a fixture where a correct first answer has an
-unclassified second answer, and separate the scorable denominator from first-answer
-accuracy. Then reconcile the existing summaries without making new model calls.
+The first **M1 plus narrow M2** slice now separates the scorable denominator from
+first-answer accuracy and reconciles counts from existing records. Next, finish the
+secondary annotation contract and pairing/protocol checks before treating M1/M2 as
+complete. Scorer validation must not be inferred from the corrected arithmetic.
 
 Before advancing to live work, the owner must approve:
 
-- the primary endpoint and treatment of scored-new-wrong versus unscorable answers;
+- any change to the approved primary endpoint, and detailed rules for the separate
+  broader-regression/uncertainty annotations;
 - scorer-audit sample sizes and acceptable error bounds;
 - token-matching policy and any unavailable-tokenizer limitation;
 - a validated reliance measure or explicit deferral of the threshold hypothesis;
