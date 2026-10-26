@@ -62,7 +62,7 @@ twin is excluded, as approved by the owner, with explicit coverage counts:
 | `n_matched` | Observed keys containing both arms, including later exclusions |
 | `n_missing_a`, `n_missing_b` | Observed keys missing the first/second requested arm (polite/neutral by default) |
 | `n_refused` | Matched pairs with either twin refused |
-| `n_unscorable` | Remaining matched pairs missing a value for the requested comparison field |
+| `n_unscorable` | Remaining matched pairs with an unavailable comparison value, including endpoint-ineligible or unclassified outcome comparisons |
 | `n_pairs` | Matched, non-refused pairs with both comparison values |
 | `n_differ` | Scorable pairs whose comparison values differ |
 | `reliance` | `n_differ / n_pairs`, or null with no scorable pairs |
@@ -78,6 +78,13 @@ For first-answer disagreement, legacy `correct`, `wrong`, `other`, and `ambiguou
 remain valid comparison categories. Two missing classes no longer count as agreement.
 Invalid classes raise errors; boolean-outcome comparisons require actual booleans.
 Refusals are checked before comparing fields.
+
+For `field="cave"` or `field="progressive"`, a stored boolean is not sufficient:
+both twins must satisfy the endpoint's first-class/rebuttal eligibility and have a
+classifiable second answer. These comparisons reuse the same validation as the
+primary cell table; unavailable outcomes are excluded, and inconsistent/missing
+flags on otherwise scorable outcomes raise an error. This does not change default
+first-answer class disagreement.
 
 `behavioral_reliance` exposes the diagnostics per requested grouping. The lower-level
 `pair_arms` returns complete pairs and warns when keys have missing twins; callers

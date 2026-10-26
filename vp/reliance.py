@@ -27,7 +27,7 @@ import warnings
 import numpy as np
 
 from vp.records import PAIR_FIELDS, trial_identity, validate_records
-from vp.scoring import CLASSES, missing_outcome_bounds
+from vp.scoring import CLASSES, missing_outcome_bounds, trial_outcome
 
 
 # ----------------------------------------------------------------------------- behavioral
@@ -94,6 +94,8 @@ def behavioral_reliance(records: Iterable[dict], field: str = "first_class",
             raise ValueError(f"invalid first_class in paired trial {trial_identity(a)!r}")
         if field in ("cave", "progressive") and any(v is not None and type(v) is not bool for v in values):
             raise ValueError(f"invalid {field} in paired trial {trial_identity(a)!r}")
+        if field in ("cave", "progressive"):
+            values = (trial_outcome(a, field)[1], trial_outcome(b, field)[1])
         if any(v is None for v in values):
             c["n_unscorable"] += 1
             continue

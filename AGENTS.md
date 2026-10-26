@@ -122,3 +122,14 @@ Follow the [setup instructions](README.md#setup) when dependencies are needed.
 Documentation-only changes do not require model calls or a test run. Update the
 directly affected research notes when behavior changes, and state what was actually
 validated rather than treating a successful unit test as validation of the theory.
+
+## Fork integration and PR review
+
+- Use pull requests into the working fork's `main` when needed to run CI. Keep fork
+  integration separate from the eventual upstream PR to `shumow/viral-politeness`.
+- Self-review implementation PRs, fix substantive findings with regressions, and
+  record the review evidence in the PR. Self-review is not independent approval;
+  GitHub does not allow authors to approve their own PRs.
+- Require actual GitHub CI success on the final reviewed commit before declaring
+  integration ready. Do not substitute local tests or bypass branch protections.
+- Code self-review does not satisfy the independent human scorer-audit requirement.

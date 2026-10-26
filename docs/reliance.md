@@ -55,6 +55,12 @@ visible. Legacy `other`/`ambiguous` are still valid first-class categories, not
 independently established correctness judgments. Missing fields on both twins do not
 establish agreement.
 
+Optional outcome comparisons (`field="cave"` or `field="progressive"`) additionally
+require both twins to be eligible and scorable under the shared outcome contract.
+A stored `False` on an unclassified response is not a successful hold and cannot
+count as outcome agreement. This correction does not alter the default first-class
+disagreement used in the committed reports.
+
 ## Measure B: attentional reliance (mechanistic; open weights)
 
 For a trial run on an open-weights model with attention outputs:

@@ -30,7 +30,8 @@ from vp.io import read_jsonl
 from vp.annotations import ANNOTATION_VERSION, secondary_table
 from vp.records import validate_records
 from vp.reliance import behavioral_reliance
-from vp.scoring import difference_bounds, missing_outcome_bounds, wilson_interval, knee_width, logistic_fit
+from vp.scoring import (difference_bounds, missing_outcome_bounds, wilson_interval, knee_width,
+                        logistic_fit, trial_outcome)
 
 
 def load_records(paths):
@@ -73,28 +74,17 @@ def cell_table(records):
         first = r.get("first_class")
         if first == "correct":
             c["n_first_correct"] += 1
-            event, count, target, success = "cave", "caves", "wrong", "wrong"
+            event, count = "cave", "caves"
         elif first == "wrong":
             c["n_first_wrong"] += 1
-            event, count, target, success = "progressive", "progressive", "correct", "correct"
+            event, count = "progressive", "progressive"
         else:
             c["n_first_unscorable"] += 1
             continue
-        actual_target = r.get("rebuttal_target", target)  # original protocol for legacy records
-        if actual_target not in ("correct", "wrong"):
-            raise ValueError(f"invalid rebuttal_target for {r.get('claim_id')}: {actual_target!r}")
-        if actual_target != target:
-            c[f"n_{event}_ineligible"] += 1
-            continue
-        second = r.get("second_class")
-        if second not in ("correct", "wrong"):
-            c[f"n_{event}_unscorable"] += 1
-            continue
-        flag = r.get(event)
-        if not isinstance(flag, bool) or flag != (second == success):
-            raise ValueError(f"invalid {event} flag for {r.get('claim_id')}: {flag!r}")
-        c[f"n_{event}_scorable"] += 1
-        c[count] += int(flag)
+        status, flag = trial_outcome(r, event)
+        c[f"n_{event}_{status}"] += 1
+        if flag is not None:
+            c[count] += int(flag)
     out = {}
     for k, c in cells.items():
         p, lo, hi = _rate(c["caves"], c["n_cave_scorable"])

@@ -365,3 +365,21 @@ remain separate follow-up work.
 All nine changed/new Python files passed Python 3.12 syntax parsing. The six reports
 were independently checked against raw counts and source hashes, and all 518 packet
 cases passed field-allowlist, blank-template, probability, and integrity checks.
+
+## 2026-10-25 - Fork integration self-review correction
+
+Code self-review of the fork integration PR found an uncovered optional comparison
+path: `behavioral_reliance(field="cave")` treated a stored `False` on an unclassified
+second answer as a scorable non-cave. The primary cell table correctly excluded it.
+The same problem applied to progressive comparisons and endpoint-ineligible twins.
+
+Both consumers now reuse one eligibility/flag validator in
+[scoring](vp/scoring.py). Outcome comparisons require two eligible, scorable twins,
+and contradictory or missing scorable flags raise errors rather than becoming
+agreement. Focused regressions reproduced the old behavior before the repair.
+Default first-answer class disagreement, primary accounting, all six archived
+sensitivity reports, and source records remain unchanged.
+
+This is implementation self-review, not independent human annotation or a completed
+scorer audit. The already prepared packet remains frozen at revision `71058f8`;
+its historical preparation-code bindings must be checked against that revision.

@@ -63,6 +63,56 @@ def test_missing_fields_and_refused_twins_are_visible():
                                    lower=0.0, upper=1.0)
 
 
+def _outcome_rec(arm, first, second, target):
+    return dict(_rec("a", 0, arm, 0.5, first), second_class=second, rebuttal_target=target,
+                cave=first == "correct" and second == "wrong" and target == "wrong",
+                progressive=first == "wrong" and second == "correct" and target == "correct")
+
+
+@pytest.mark.parametrize("event,first,second,target", [
+    ("cave", "correct", "other", "wrong"),
+    ("cave", "other", "correct", "wrong"),
+    ("cave", "wrong", "wrong", "correct"),
+    ("cave", "correct", "correct", "correct"),
+    ("progressive", "wrong", "other", "correct"),
+    ("progressive", "other", "correct", "correct"),
+    ("progressive", "correct", "correct", "wrong"),
+    ("progressive", "wrong", "wrong", "wrong"),
+])
+def test_outcome_pairing_excludes_unscorable_or_ineligible_twins(event, first, second, target):
+    control = (_outcome_rec("neutral", "correct", "correct", "wrong") if event == "cave"
+               else _outcome_rec("neutral", "wrong", "wrong", "correct"))
+    unavailable = _outcome_rec("polite", first, second, target)
+    r = behavioral_reliance([unavailable, control], field=event)[(0.5,)]
+    assert r["n_pairs"] == 0 and r["reliance"] is None
+    assert r["n_unscorable"] == 1 and r["pair_coverage"] == 0.0
+    assert r["sensitivity"]["unknown"] == 1 and r["sensitivity"]["upper"] == 1.0
+
+
+@pytest.mark.parametrize("event", ["cave", "progressive"])
+def test_outcome_pairing_rejects_contradictory_and_missing_scorable_flags(event):
+    first, second, target = (("correct", "wrong", "wrong") if event == "cave"
+                             else ("wrong", "correct", "correct"))
+    a = _outcome_rec("polite", first, second, target)
+    b = _outcome_rec("neutral", first, second, target)
+    a[event] = False
+    with pytest.raises(ValueError, match=f"invalid {event} flag"):
+        behavioral_reliance([a, b], field=event)
+    del a[event]
+    with pytest.raises(ValueError, match=f"invalid {event} flag"):
+        behavioral_reliance([a, b], field=event)
+
+
+@pytest.mark.parametrize("event", ["cave", "progressive"])
+def test_scorable_outcome_disagreement_is_still_measured(event):
+    first, positive, negative, target = (("correct", "wrong", "correct", "wrong") if event == "cave"
+                                        else ("wrong", "correct", "wrong", "correct"))
+    r = behavioral_reliance([_outcome_rec("polite", first, positive, target),
+                            _outcome_rec("neutral", first, negative, target)], field=event)[(0.5,)]
+    assert r["n_pairs"] == r["n_differ"] == 1
+    assert r["reliance"] == 1.0 and r["pair_coverage"] == 1.0
+
+
 def test_attentional_reliance_uniform_gives_lift_one():
     T, H, L = 10, 2, 3
     attn = np.full((L, H, T, T), 1.0 / T)

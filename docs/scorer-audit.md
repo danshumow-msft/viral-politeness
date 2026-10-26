@@ -56,6 +56,12 @@ JSON-object hashes use UTF-8 bytes from
 default separators; file hashes cover exact bytes. Do not substitute a different
 compact-JSON encoding when verifying case or record hashes.
 
+The initially prepared main-run packet remains frozen at implementation revision
+`71058f8fb4885fea592274d5552d3667963f6499`. Subsequent code fixes do not authorize
+regenerating its cohort, case IDs, or private mapping. Verify its preparation-code
+hashes against that archived revision, not by assuming the current checkout is the
+same implementation.
+
 Opaque case IDs and packet order use a separate randomly generated blinding seed.
 That seed and all identity mappings remain coordinator-only. Input ordering does
 not affect selection. Replaying the exact IDs requires the private seed; a new
