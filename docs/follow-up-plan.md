@@ -2,7 +2,10 @@
 
 Date: 2026-10-24.
 
-Status: planned; no work package below is implemented by adding this document.
+Status: in progress. The initial M1/M2 aggregation slice, independent secondary
+annotation contract, pairing/protocol guards, conditional sensitivity bounds, and
+blinded-audit preparation are implemented. Independent validation and later
+experiment gates remain open.
 
 This plan turns the [assessment](assessment-2026-10-24.md) of revision
 [`1b7f773`](https://github.com/shumow/viral-politeness/tree/1b7f7734987c32281c34423407c6ca8f87d4e7b4)
@@ -46,12 +49,13 @@ The 5,085 count applies the documented exclusions to the current annotations; it
 not a new, independently adjudicated correctness result. Five completing-the-square
 responses illustrate real correct-to-new-incorrect regressions hidden inside `other`.
 At density 1, polite and neutral prompts also differ in mean billed input tokens:
-338.1 versus 321.1. These are starting facts to reconcile, not completed repairs.
+338.1 versus 321.1. Analysis version 2 now reproduces the 5,085 scorable count
+without changing stored annotations; token matching and scoring validity remain open.
 
 ## Work packages and dependencies
 
-All packages start as **planned**. Dependencies are explicit; independent offline
-packages may proceed in parallel after their common prerequisite.
+M1-M3 are **in progress**; M4-M8 remain **planned**. Dependencies are explicit;
+independent offline packages may proceed in parallel after their common prerequisite.
 
 | ID | Work package | Depends on | Completion gate |
 |---|---|---|---|
@@ -63,6 +67,77 @@ packages may proceed in parallel after their common prerequisite.
 | M6 | Calibration pilot | M2, M3, M4, M5; approved protocol and budget | Nonzero, nonsaturated regime or a documented stop |
 | M7 | Confirmatory behavioral study | M6; frozen analysis and approved budget | Paired effect estimates with uncertainty |
 | M8 | Causal mechanism study | Reproducible positive behavior from M7 | Intervention evidence or an explicit inconclusive result |
+
+### Progress: initial offline slice, 2026-10-24
+
+- The owner approved preserving supplied-wrong-answer adoption as primary, with
+  broader regression and uncertainty kept separate. The initial
+  [outcome contract](outcomes.md) documents eligibility and the legacy record mapping.
+- Analysis version 2 separates scorable outcome counts from first-answer accuracy,
+  exposes excluded/ineligible counts and coverage, and uses those denominators for
+  rates, Wilson intervals, exchange-rate baselines, and logistic weights.
+- Empty outcome denominators are unavailable, not zero. Missing or inconsistent
+  event flags on otherwise scorable trials raise an error rather than silently
+  becoming holds.
+- Offline regressions cover all six committed runs and the main-run CLI. Original
+  records, hand reviews, stored summaries, and the pre-registration are untouched.
+  The [results log](../results_log.md) has the retrospective count reconciliation.
+
+This initial slice did not complete M1/M2. The next implemented slice is recorded
+below; no new data collection is authorized.
+
+### Progress: secondary contract and compatibility checks, 2026-10-25
+
+- The owner approved independent versioned annotations and visible exclusion of
+  missing/refused twins, with duplicate/incompatible trials rejected.
+- [Contract version 2](outcomes.md) defines the optional secondary-annotation schema,
+  source fingerprint, provenance, explicit processing statuses, and independently
+  scorable correctness/commitment/uncertainty. Analysis version 3 reports these
+  endpoints separately from unchanged legacy primary labels.
+- All committed records remain unannotated; their secondary rates are unavailable.
+  No automatic classifier, model judging, or retrospective label migration was added.
+- [Shared record checks](protocols.md) reject duplicate identities, incompatible
+  recorded configurations/references, and mismatched arm layouts. They preserve
+  unknown historical metadata as unverified instead of inventing it.
+- Pairing reports matched/missing/refused/unscorable counts and coverage. Missing
+  comparison fields no longer count as agreement. The main run retains 200 matched
+  pairs per density, with 198 usable pairs at density 0.9 after refusals.
+- Both runners record additive generation/scoring configurations and validate
+  resumes before importing clients or loading weights. Rescoring preserves secondary
+  source bindings, original hand reviews, and prior scoring configurations.
+- Offline fixtures and mocked runner tests cover the new contracts and preflight
+  failures; the six original datasets retain their corrected adoption counts.
+
+M1's serialization and readout definitions are implemented, but independent trusted
+annotations and blinded scorer validation still require M3. M2 still needs
+sensitivity analysis and publication of versioned reanalysis artifacts. Full
+expected-run manifests, immutable checkpoint/context provenance, and token matching
+remain M4 work; the incremental configuration metadata is not a replacement.
+
+### Progress: sensitivity exports and blinded-audit design, 2026-10-25
+
+- Analysis version 4 implements [conditional bounds](sensitivity.md) for primary and
+  progressive outcomes, first-answer accuracy, observed pair keys, independently
+  annotated secondary metrics, and descriptive polite-minus-neutral contrasts.
+- Scoped strict-JSON sensitivity reports are versioned separately for all six
+  [committed runs](../data/runs/README.md), with source hashes and unchanged
+  historical records/summaries. Unknown eligibility and scorer mistakes are not
+  silently imputed by the bounds.
+- The owner approved the [retrospective audit design](scorer-audit.md): a random
+  sample of 400 accepted negatives plus exception censuses, two independent human
+  reviewers, and a 95% one-sided upper bound below 1% for accepted-negative misses.
+- The offline preparer separates reviewer material from private coordinator
+  mappings and writes blank review templates only. Source labels and hand reviews
+  are never exposed as grading metadata or changed by preparation.
+- Exact finite-population gate arithmetic is tested against enumerated small
+  populations, including discrete equality boundaries. A partial review remains
+  pending, and unresolved reviews count conservatively.
+
+This completes the planned implementation of conditional sensitivity and scoped
+reanalysis publication, not independent measurement validation. M3 still requires
+real independent reviews, disagreement adjudication, and a locked report; those
+are not replaced by synthetic tests or packet preparation. Full eligibility/scorer
+uncertainty and later model-level causal inference require their separate gates.
 
 ### M1. Define outcomes before changing the scorer
 
@@ -270,15 +345,19 @@ it as inconclusive and update the [mechanism note](mechanism.md) accordingly.
 
 ## First implementation slice and decision gates
 
-The recommended first code change is **M1 plus a narrow M2 regression**: agree on
-endpoint/eligibility definitions, add a fixture where a correct first answer has an
-unclassified second answer, and separate the scorable denominator from first-answer
-accuracy. Then reconcile the existing summaries without making new model calls.
+The first two **M1/M2** slices now separate scorable denominators from first-answer
+accuracy, specify independent secondary annotations, and enforce recorded pairing/
+protocol compatibility. Conditional sensitivity and a frozen blinded-audit design
+are now implemented. Next, obtain independent reviews and adjudication before
+treating the measurement pipeline as validated. Scorer validity must not be inferred
+from corrected arithmetic, serialization, or a hypothetical audit gate calculation.
 
 Before advancing to live work, the owner must approve:
 
-- the primary endpoint and treatment of scored-new-wrong versus unscorable answers;
-- scorer-audit sample sizes and acceptable error bounds;
+- any change to the approved primary endpoint, and detailed rules for the separate
+  broader-regression/uncertainty annotations;
+- any revision to the approved scorer-audit sample size/error bound, and any paid
+  review or new positive-control evaluation;
 - token-matching policy and any unavailable-tokenizer limitation;
 - a validated reliance measure or explicit deferral of the threshold hypothesis;
 - numerical calibration gates, claim splits, model choices, and budget/stopping caps.

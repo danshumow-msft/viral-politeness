@@ -15,12 +15,61 @@ larger than 9 MB compressed goes to a GitHub release instead; none has so far.
 | `pilot_haiku55_low_computational` | Haiku 5.5, low | computational | 260 | `pilot_haiku55_low_computational.jsonl.gz` | `pilot_haiku55_low_computational_summary.json` |
 | `main_opus55_computational` | Opus 5.5, medium | computational | 5,200 | `main_opus55_computational.jsonl.gz` | `main_opus55_computational_summary.json` |
 
-Reproduce a summary:
+Analyze the records with the current implementation:
 
 ```bash
 python -m vp.analysis data/runs/main_opus55_computational.jsonl.gz
 ```
 
+## Analysis versions
+
+The committed `*_summary.json` files are historical version-1 outputs. Current
+analysis emits `analysis_version: 4`, `outcome_contract_version: 2`,
+`secondary_annotation_version: 1`, and `sensitivity_version: 1`. Version 2 introduced separate scorable denominators
+and exclusion/coverage counts; version 3 retains them and adds independent secondary
+summaries and protocol/pairing diagnostics. Version 4 adds conditional missing-outcome
+bounds. Rates with no scorable trials
+are JSON null, printed as `-`; derived exchange rates and fit weights use scorable
+adoption counts. See the [outcome contract](../../docs/outcomes.md).
+
+For the main run, current aggregation preserves 5,112 initially-correct labels but
+excludes 27 unclassifiable second answers from the adoption denominator, giving
+0 adoptions in 5,085 scorable trials. The [results log](../../results_log.md) records
+the retrospective correction across all six runs. No model was rerun or rejudged.
+Write any new derived output to a versioned name such as `*_summary_v4.json`, not
+over the historical summaries. [Protocol checks](../../docs/protocols.md) reject
+duplicate/incompatible trials and report missing/refused twins. Legacy metadata
+remains explicitly unverified, and fit-identifiability improvements remain open.
+No committed run has secondary annotations; its secondary rates are null, not zero.
+
 The three hand-reviewed records in the main grid carry `hand_review`,
 `cave_as_judged` and `second_class_as_judged`; `experiments/rescore.py` leaves them
 unchanged.
+
+## Versioned sensitivity reports
+
+These scoped analysis-version-4 exports retain source hashes, descriptive counts,
+per-cell bounds, polite-minus-neutral descriptive contrasts, pairing bounds, and
+unavailable secondary metrics. They intentionally omit unrelated legacy logistic
+fits. Original record files and version-1 summaries remain untouched.
+
+| Run | Report |
+|---|---|
+| Main Opus computational | [main_opus55_computational_sensitivity_v1.json](main_opus55_computational_sensitivity_v1.json) |
+| Pilot Opus computational | [pilot_opus55_computational_sensitivity_v1.json](pilot_opus55_computational_sensitivity_v1.json) |
+| Pilot Opus medical | [pilot_opus55_medical_sensitivity_v1.json](pilot_opus55_medical_sensitivity_v1.json) |
+| Pilot Sonnet computational | [pilot_sonnet55_computational_sensitivity_v1.json](pilot_sonnet55_computational_sensitivity_v1.json) |
+| Pilot Haiku computational | [pilot_haiku55_computational_sensitivity_v1.json](pilot_haiku55_computational_sensitivity_v1.json) |
+| Pilot Haiku low-effort computational | [pilot_haiku55_low_computational_sensitivity_v1.json](pilot_haiku55_low_computational_sensitivity_v1.json) |
+
+Reproduce one report to a **new** path:
+
+```text
+python -m vp.analysis data\runs\main_opus55_computational.jsonl.gz --sensitivity-only --out results\main_sensitivity_check_v1.json
+```
+
+See [sensitivity scope and assumptions](../../docs/sensitivity.md). In particular,
+the main `[0, 27/5112]` adoption range excludes first-answer uncertainty and refusals
+and holds all scored labels fixed. It is not a general-model or whole-run confidence
+limit. The [scorer audit](../../docs/scorer-audit.md) has a separate uncertainty model
+and no completed independent reviews yet. Private audit mappings are not committed.

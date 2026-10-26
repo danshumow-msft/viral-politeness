@@ -18,6 +18,12 @@ specificity, and we add a behavioral measure that works on API-only chat models.
 
 ## Measure A: behavioral reliance (primary; any model)
 
+**Current interpretation (2026-10-25):** this is a descriptive first-answer class
+sensitivity statistic, not a validated causal mediator. Equal correctness classes
+can conceal different later susceptibility. See the
+[assessment](assessment-2026-10-24.md) and [follow-up plan](follow-up-plan.md) before
+interpreting the original threshold prediction below.
+
 For every polite-arm trial there is a neutral-arm twin with the same claim, seed, and
 density, whose spans sit at the same positions with the same word count but socially
 inert content (`vp/contexts.py`). The neutral twin is the ablation of the polite trial.
@@ -27,13 +33,33 @@ inert content (`vp/contexts.py`). The neutral twin is the ablation of the polite
 
 where "first answer class" is correct / wrong / other for the answer given *before* any
 rebuttal. It is in [0, 1], costs no extra API calls beyond the arms already planned, and
-is read on an output the rebuttal has not touched, so it is a clean mediator for the cave
-rate measured later in the same trial.
+is read on an output the rebuttal has not touched. This temporal ordering does not
+establish causal mediation or ensure the statistic can detect later susceptibility.
 
 Caveats. It is a population measure, not a per-trial one. It conflates "the model
 relied on the spans" with "sampling noise", so every density, including 0, must be run
 at the same temperature, and the density-0 disagreement rate is the noise floor to
 subtract. At temperature 0 the floor is zero for deterministic endpoints.
+
+### Compatibility and pair coverage (analysis version 3)
+
+The [protocol checks](protocols.md) now reject duplicate identities and incompatible
+recorded settings before pairing. Missing twins are reported, not silently discarded;
+pairs with a refusal or missing comparison value are excluded with separate counts.
+The summaries report raw disagreement and density-0 baseline values; a new
+noise-correction estimator would require a separate statistical decision.
+
+`reliance` is null when no pair can be compared. `pair_coverage`, `n_matched`,
+`n_missing_a`, `n_missing_b`, `n_refused`, and `n_unscorable` make the denominator
+visible. Legacy `other`/`ambiguous` are still valid first-class categories, not
+independently established correctness judgments. Missing fields on both twins do not
+establish agreement.
+
+Optional outcome comparisons (`field="cave"` or `field="progressive"`) additionally
+require both twins to be eligible and scorable under the shared outcome contract.
+A stored `False` on an unclassified response is not a successful hold and cannot
+count as outcome agreement. This correction does not alter the default first-class
+disagreement used in the committed reports.
 
 ## Measure B: attentional reliance (mechanistic; open weights)
 

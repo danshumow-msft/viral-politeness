@@ -221,3 +221,165 @@ produce regressive sycophancy at all, with or without eight turns of politeness,
 rudeness or claimed authority in front of the question. The politeness hypothesis is not
 refuted by this; it is unreachable with this outcome on these models. The three design
 options listed in the previous entry stand.
+
+## 2026-10-24 - Retrospective scorable-denominator correction (analysis version 2)
+
+This is a correction to aggregation of the existing records, not a new experiment
+or judge pass. The owner approved keeping adoption of the supplied wrong answer as
+the primary endpoint; broader regressions and uncertainty remain separate readouts
+requiring their own annotations. See the [outcome contract](docs/outcomes.md) and
+[follow-up plan](docs/follow-up-plan.md).
+
+The previous aggregation used every initially-correct answer as the cave-rate
+denominator, even when the second answer was `other` or `ambiguous`. Analysis version
+2 applies the documented exclusion rule to both outcome rates, retaining separate
+first-answer accuracy counts. It also excludes wrong-target rebuttals from the
+corresponding endpoint, reports coverage, and uses scorable adoption counts for
+exchange-rate baselines and fit weights. A zero scorable denominator is unavailable
+(JSON null / CLI `-`), not a measured zero event rate.
+
+| Run | Trials | Refused | Initially correct, non-refused | Scorable adoption trials | Unscorable second answers among initially correct | Final adoptions |
+|---|---:|---:|---:|---:|---:|---:|
+| `main_opus55_computational` | 5,200 | 2 | 5,112 | 5,085 | 27 | 0 |
+| `pilot_opus55_computational` | 260 | 0 | 260 | 260 | 0 | 0 |
+| `pilot_opus55_medical` | 260 | 2 | 258 | 258 | 0 | 0 |
+| `pilot_sonnet55_computational` | 260 | 0 | 260 | 259 | 1 | 0 |
+| `pilot_haiku55_computational` | 260 | 0 | 255 | 247 | 8 | 0 |
+| `pilot_haiku55_low_computational` | 260 | 0 | 258 | 254 | 4 | 0 |
+
+Thus the main result under the existing annotations is **0 target adoptions in
+5,085 scorable trials**, not 0/5,110 from the historical prose or 0/5,112 from the
+stored version-1 summary. The first-answer accuracy remains 5,112/5,198. Main-run
+scorable per-cell counts are 193 to 197; Wilson upper bounds still round to 0.02.
+All three hand-reviewed overrides remain unchanged.
+
+The 27 excluded second answers are not established holds. They include the five
+completing-the-square responses that reject the supplied target but change a correct
+constant into an incorrect one. This correction does not relabel them or establish
+a politeness effect.
+
+All committed record files and historical `*_summary.json` outputs are retained.
+Current summaries identify `analysis_version: 2` and `outcome_contract_version: 1`;
+new derived files must use a distinct versioned name. Synthetic regression tests and
+tests against each committed gzip record file cover the corrected accounting.
+Pairing/protocol validation, a balanced scorer audit, and degenerate-fit handling
+remain open; corrected weights do not validate a reliance threshold.
+
+## 2026-10-25 - Independent secondary contract and pairing/protocol guards
+
+This is an offline implementation slice, not a new experiment or annotation pass.
+The owner approved independent secondary annotations and explicit coverage for
+missing/refused twins, with duplicate/incompatible trials rejected.
+
+[Outcome contract version 2](docs/outcomes.md) defines an optional
+`secondary_annotation` object with a source fingerprint, versioned annotation set,
+timestamped provenance, per-answer processing status, and independent judgments of
+correctness, target commitment, and uncertainty. Analysis version 3 reports these
+metrics separately from the unchanged legacy primary endpoint and its corrected
+denominator. No committed record was labeled under the new contract: all secondary
+rates on the six existing datasets remain unavailable, not measured zeros.
+
+[Protocol checks](docs/protocols.md) now reject duplicate trial identities,
+incompatible recorded generation/scoring settings or references, and arm-layout
+mismatches. Missing metadata remains explicitly unverified. Pairing exposes
+matched/missing/refused/unscorable counts and coverage instead of silently dropping
+duplicates or counting two missing classes as agreement.
+
+Offline reanalysis of each committed run independently preserved the source records
+and their SHA-256 hashes, and reproduced the historical reliance values and usable
+pair counts. The main run has 1,400 matched polite/neutral pairs, 1,398 usable and
+2 refused; the medical pilot has 70 matched, 69 usable and 1 refused. Other pilots
+have 70 usable pairs each. No run has missing twins or missing comparison fields.
+The main primary result remains 0 target adoptions in 5,085 scorable trials.
+
+Both runners now emit additive generation/scoring configurations and check resumed
+output before importing clients or loading weights; a legacy file without those
+configurations requires a new output file. Rescoring preserves independent
+annotations and hand-review decisions, retaining prior scoring configurations
+without inventing unknown history. Analysis and rescoring reject an output path
+that would overwrite their source record file.
+
+Regression coverage includes schema/source-binding failures, separate secondary
+denominators, duplicate/incompatible/missing pairing, mocked API records, preflight
+failures before clients/weights, scoring-history preservation, the CLI, and the six
+original datasets. No model or judge calls, weight downloads, or source reannotations
+were performed. Blinded scorer validation, sensitivity analysis, full run manifests,
+token matching, and reliance/fit-identifiability work remain open.
+
+## 2026-10-25 - Conditional sensitivity and blinded-audit preparation (no reviews)
+
+This is an offline analysis/design slice. Analysis version 4 adds conditional
+missing-outcome identification bounds and descriptive arm contrasts while retaining
+outcome contract version 2 and every stored class, event flag, and hand review.
+See [sensitivity scope](docs/sensitivity.md) and the
+[retrospective audit design](docs/scorer-audit.md).
+
+The owner approved 400 randomly sampled accepted negatives plus exception censuses,
+two independent human reviewers, and a 95% one-sided upper confidence bound below
+1% for the accepted-negative miss fraction. This is not a traditional false-negative
+rate among true positives. No independent reviews or adjudications have occurred,
+and no audit-validity gate has passed.
+
+All six [versioned sensitivity exports](data/runs/README.md) were generated from the
+committed record files without new model/judge calls. Their source hashes and
+historical summary hashes were preserved; strict-JSON validation and independent
+source counting reproduced:
+
+| Run | Scorable adoption trials | Unknown second answers within the eligible population | Conditional population | Adoption identification range |
+|---|---:|---:|---:|---|
+| Main Opus computational | 5,085 | 27 | 5,112 | [0, 27/5112] |
+| Pilot Opus computational | 260 | 0 | 260 | [0, 0] |
+| Pilot Opus medical | 258 | 0 | 258 | [0, 0] |
+| Pilot Sonnet computational | 259 | 1 | 260 | [0, 1/260] |
+| Pilot Haiku computational | 247 | 8 | 255 | [0, 8/255] |
+| Pilot Haiku low-effort computational | 254 | 4 | 258 | [0, 4/258] |
+
+All ranges hold the existing scorable labels and eligibility fixed. The main upper
+endpoint is about 0.528%, **not a whole-run confidence limit**: 86 unclassified first
+answers and 2 refusals are outside this conditional adoption population. A separate
+first-answer missingness range is [5112/5198, 1]. Paired disagreement at density 0.9
+ranges from 1/200 to 3/200 over observed keys after allowing either outcome for the
+two refused pairs. None of these calculations validates causal reliance or assumes
+the accepted labels are infallible.
+
+The approved local packet contains 518 ungraded cases: 400 of 5,082 ordinary accepted
+negatives, 113 unscorable cases, 3 prior hand reviews, and 2 refusals. Reviewer files
+use a tested metadata allowlist and blank templates; old decisions, identities,
+sampling probabilities, and the independent blinding seed are in a separate private
+coordinator mapping under ignored results, not committed. Source, frame, record,
+case, exported-file, and preparation-code bindings were checked without exposing
+the mappings to reviewers.
+
+The audit's finite-population confidence helper is tested against small exact
+enumerations, including a discrete-tail equality case that required rational rather
+than floating-point tail comparison. Unresolved cases count conservatively, and
+incomplete review of the fixed planned sample cannot pass.
+
+All committed runs remain without secondary annotations; those rates/bounds are
+unavailable. Actual independent review, adjudication, and a locked validation report
+remain M3 work. Positive-class sensitivity cannot be certified from a frame with no
+final positives. Full run manifests, tokenizer matching, and model-level inference
+remain separate follow-up work.
+
+**Validation:** the configured full offline suite passed 186 tests with no warnings.
+All nine changed/new Python files passed Python 3.12 syntax parsing. The six reports
+were independently checked against raw counts and source hashes, and all 518 packet
+cases passed field-allowlist, blank-template, probability, and integrity checks.
+
+## 2026-10-25 - Fork integration self-review correction
+
+Code self-review of the fork integration PR found an uncovered optional comparison
+path: `behavioral_reliance(field="cave")` treated a stored `False` on an unclassified
+second answer as a scorable non-cave. The primary cell table correctly excluded it.
+The same problem applied to progressive comparisons and endpoint-ineligible twins.
+
+Both consumers now reuse one eligibility/flag validator in
+[scoring](vp/scoring.py). Outcome comparisons require two eligible, scorable twins,
+and contradictory or missing scorable flags raise errors rather than becoming
+agreement. Focused regressions reproduced the old behavior before the repair.
+Default first-answer class disagreement, primary accounting, all six archived
+sensitivity reports, and source records remain unchanged.
+
+This is implementation self-review, not independent human annotation or a completed
+scorer audit. The already prepared packet remains frozen at revision `71058f8`;
+its historical preparation-code bindings must be checked against that revision.

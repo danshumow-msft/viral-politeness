@@ -18,6 +18,10 @@ phase; the follow-up plan is not a pre-registration amendment.
 | `PLAN.md` | original plan of record, item status |
 | [`docs/assessment-2026-10-24.md`](docs/assessment-2026-10-24.md) | repository assessment and verified measurement limitations |
 | [`docs/follow-up-plan.md`](docs/follow-up-plan.md) | phased measurement repairs, acceptance criteria, and experiment gates |
+| [`docs/outcomes.md`](docs/outcomes.md) | agreed primary endpoint, scorable counts, coverage, and analysis output versions |
+| [`docs/protocols.md`](docs/protocols.md) | identity, pooling/resume compatibility, pair coverage, and historical metadata limitations |
+| [`docs/sensitivity.md`](docs/sensitivity.md) | conditional missing-outcome bounds and versioned strict-JSON exports |
+| [`docs/scorer-audit.md`](docs/scorer-audit.md) | retrospective blinded audit design; independent reviews are still pending |
 | `docs/references.md` | theory sketch, candidate benchmarks with verified figures |
 | `docs/claim_bank.md` | why SycEval, what the vendored bank contains |
 | `docs/reliance.md` | the two reliance measures and how the 0.9 prediction is tested |
@@ -28,6 +32,7 @@ phase; the follow-up plan is not a pre-registration amendment.
 | `experiments/run_api.py` | density sweep on chat models over the Claude API |
 | `experiments/run_openweights.py` | same protocol on Hugging Face models, with attention |
 | `experiments/rescore.py` | re-classify an existing results file with the current scorer and judge |
+| [`vp/audit.py`](vp/audit.py) | offline preparation of ungraded reviewer packets and private coordinator mappings |
 | `results_log.md` | every live run, what it found, what changed because of it |
 | `data/runs/` | committed run summaries and gzip-compressed per-trial records |
 | `tests/` | offline unit tests |
@@ -62,13 +67,32 @@ python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B-Instruct --n-cla
 python -m experiments.run_openweights --model Qwen/Qwen2.5-0.5B --base --n-claims 5
 ```
 
-Status: the pre-registered main grid has run on `claude-opus-5-5` (`results_log.md`):
-0 regressive caves in 5,110 scorable trials, every cell at [0.00, 0.02], the
-pre-specified null. Pilot-scale runs on Sonnet 5.5, Haiku 5.5 and the medical bank
+Status: the pre-registered main grid has run on `claude-opus-5-5`
+([results log](results_log.md)): 0 target adoptions in 5,085 scorable initially-correct
+trials after the retrospective analysis-version-2 exclusion correction, every cell
+at [0.00, 0.02]. The 5,112 initially-correct answers include 27 unclassifiable second
+answers; those are not scorable holds. Historical summaries are retained, and the
+dated correction is in the results log. Zero target adoptions does not mean zero
+broader correct-to-incorrect regressions; see the [outcome contract](docs/outcomes.md).
+Pilot-scale runs on Sonnet 5.5, Haiku 5.5 and the medical bank
 found the same floor. The pilot fixed the scorer and the judge
 (`docs/preregistration.md`, amendment 2). The hypothesis is unreachable with this
 outcome on these models; the next step is an open-weights arm, a stronger rebuttal, or
 another vendor, each needing an amendment first.
+
+Analysis version 3 added [independent secondary annotations](docs/outcomes.md)
+and [protocol/pairing checks](docs/protocols.md). It does not infer broader regressions
+from old `other` labels or rejudge existing outputs: secondary rates on the committed
+runs remain unavailable. Duplicate or incompatible trials now fail explicitly;
+missing/refused twins are excluded with visible coverage. New runs record generation
+and scoring configurations, and unsafe legacy resumes require a new output file.
+
+Current version 4 adds [conditional sensitivity bounds](docs/sensitivity.md).
+For example, assigning all 27 unclassified second answers to adoption gives an
+upper endpoint of `27/5112` (0.528%) **conditional on the existing eligibility and
+scored labels**, not a whole-run confidence limit. The
+[blinded scorer-audit design](docs/scorer-audit.md) and packet preparer are available;
+no independent reviews have been completed and no scorer-validity gate has passed.
 
 Companion repo: [`transformer-context-contagion`](https://github.com/shumow/transformer-context-contagion)
 (the conservation-law / condensation-knee results this project builds on).
